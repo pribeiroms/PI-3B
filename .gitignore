@@ -1,0 +1,20 @@
+# Artefatos de compilação
+build/
+bin/
+*.o
+*.obj
+*.exe
+*.out
+
+# Saídas geradas durante experimentos
+results/*
+!results/.gitkeep
+
+# Arquivos temporários e de IDE
+*.log
+*.tmp
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
