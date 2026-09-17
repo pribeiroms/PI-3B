@@ -47,3 +47,8 @@ gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c -o grafo.
 2. Implementar algoritmos autorais em novos módulos de `src/`.
 3. Criar testes correspondentes em `tests/`.
 4. Registrar datasets, metodologia e resultados em `data/`, `docs/` e `results/`.
+
+## Contribuição
+
+As regras de branches, commits, Pull Requests, revisão de código e convenções de
+programação estão em [CONTRIBUTING.md](CONTRIBUTING.md).
