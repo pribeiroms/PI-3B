@@ -28,6 +28,15 @@ mingw32-make run
 mingw32-make test
 ```
 
+Para executar a modelagem geográfica da Fase I com o dataset versionado:
+
+```sh
+mingw32-make run
+```
+
+Consulte [docs/MODELAGEM_GRAFO.md](docs/MODELAGEM_GRAFO.md) para a regra de
+conexão entre antenas e a interpretação do resultado de cruzamentos.
+
 Os executáveis são gerados em `build/`. Para removê-los:
 
 ```sh
