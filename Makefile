@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Werror -Iinclude
-LDFLAGS ?=
+LDFLAGS ?= -lm
 
 BUILD_DIR := build
 APP := $(BUILD_DIR)/grafo.exe

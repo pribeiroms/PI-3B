@@ -57,3 +57,6 @@ O programa deve receber o caminho `data/opencellid_brasil_filtrado.csv`
 como entrada e validar cabeçalho, conversão numérica e coordenadas antes de criar
 os vértices. Para experimentos menores, filtros por `radio`, operadora ou região
 podem ser aplicados durante a leitura, preservando o arquivo original sem edição.
+
+A regra de formação das arestas sem peso e a verificação de cruzamentos da Fase I
+estão especificadas em [MODELAGEM_GRAFO.md](MODELAGEM_GRAFO.md).
