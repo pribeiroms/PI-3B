@@ -258,9 +258,19 @@ size_t grafo_quantidade_arestas(const Grafo *grafo)
 
 int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino)
 {
-    if (grafo == NULL || origem >= grafo->matriz_adjacencia.ordem ||
-        destino >= grafo->matriz_adjacencia.ordem) return 0;
-    return grafo->matriz_adjacencia.dados[origem * grafo->matriz_adjacencia.ordem + destino] != 0U;
+    const NoAdjacencia *no;
+
+    if (grafo == NULL || origem >= grafo->quantidade_vertices ||
+        destino >= grafo->quantidade_vertices) return 0;
+    for (no = grafo->lista_adjacencia.listas[origem]; no != NULL; no = no->proximo)
+        if (no->vertice == destino) return 1;
+    return 0;
+}
+
+const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice)
+{
+    if (grafo == NULL || vertice >= grafo->quantidade_vertices) return NULL;
+    return grafo->lista_adjacencia.listas[vertice];
 }
 
 static double orientacao(const Vertice *a, const Vertice *b, const Vertice *c)
