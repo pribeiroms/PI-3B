@@ -74,4 +74,7 @@ int grafo_possui_cruzamentos(const Grafo *grafo);
 
 int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino);
 
+/* Retorna o inicio da lista ligada de vizinhos de um vertice, ou NULL se invalido/sem vizinhos. */
+const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice);
+
 #endif
