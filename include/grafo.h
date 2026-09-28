@@ -77,4 +77,17 @@ int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino);
 /* Retorna o inicio da lista ligada de vizinhos de um vertice, ou NULL se invalido/sem vizinhos. */
 const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice);
 
+/* Criar os Resultados das validacoes de planaridade com base na fórmula de Euler*/
+typedef enum{
+  EULER_NAO_APLICAVEL,   /*Nao se aplica a formula */
+  EULER_NAO_PLANAR,      /*E > 3V-6: certamente não é planar*/  
+  EULER_INCONCLUSIVO     /*Não tem certeza de Planaridade*/
+}ResultadoEuler;
+
+/*Função que verifica a condição da formula  E <= 3V - 6 (Grafo Simples)*/ 
+ResultadoEuler grafo_verificar_euler( const Grafo *grafo);
+
+/*Retorna um texto explicativo do resultado, para exibir ao usuario*/
+const char *grafo_mensagem_euler(ResultadoEuler resultado);
+
 #endif

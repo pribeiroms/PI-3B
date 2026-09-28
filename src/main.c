@@ -10,6 +10,7 @@ int main(int argc, char *argv[])
     char erro[128];
     Grafo *grafo = grafo_criar();
     size_t carregadas;
+    ResultadoEuler euler;
 
     if (grafo == NULL) {
         fputs("Erro ao criar o grafo.\n", stderr);
@@ -24,11 +25,15 @@ int main(int argc, char *argv[])
     (void)grafo_construir_conexoes(grafo);
     printf("Vertices: %zu\nArestas sem peso: %zu\n", grafo_quantidade_vertices(grafo),
            grafo_quantidade_arestas(grafo));
+    /* Validacao de planaridade na fórmula de Euler. */
+    euler = grafo_verificar_euler(grafo);
+    puts(grafo_mensagem_euler(euler));       
     if (grafo_possui_cruzamentos(grafo)) {
         puts("Resultado: existem cruzamentos; a planta exige isolamento ou novas rotas.");
     } else {
         puts("Resultado: nao foram encontrados cruzamentos na planta analisada.");
     }
     grafo_destruir(grafo);
+    
     return 0;
 }

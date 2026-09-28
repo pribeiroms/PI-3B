@@ -46,3 +46,21 @@ build/grafo.exe data/opencellid_brasil_filtrado.csv 1000
 Use `0` como limite para carregar todos os registros. A verificação de
 cruzamentos compara pares de arestas e, por isso, é recomendável analisar o
 dataset completo por recortes geográficos nas próximas otimizações.
+
+
+## Validação de planaridade (Euler)
+
+Com base na fórmula de Euler, todo grafo simples planar com V >= 3 satisfaz:
+
+`E <= 3V - 6`
+
+onde V é o número de vértices e E é o número de arestas.
+Essa desigualdade é usada para validar a planaridade do grafo, mas é uma
+condição **necessária, não suficiente**:
+
+**Violada** (E > 3V - 6): o grafo é certamente **não planar**.
+**Aceita** (E <= 3V - 6): o resultado é **inconclusivo**. A análise
+  baseada apenas em Euler não garante que o grafo seja planar
+  (contraexemplo: K3,3, com V = 6 e E = 9, que satisfaz a condição
+  mas não é planar).
+**V < 3**: a condição não se aplica.
