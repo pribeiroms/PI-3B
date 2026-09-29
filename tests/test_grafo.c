@@ -113,6 +113,65 @@ static void teste_suporta_mil_vertices(void)
     grafo_destruir(grafo);
 }
 
+static Grafo *criar_grafo_com_vertices(size_t quantidade)
+{
+    Grafo *grafo = grafo_criar();
+    size_t i;
+
+    assert(grafo != NULL);
+    for (i = 0U; i < quantidade; ++i) {
+        assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, (unsigned int)i,
+                                      0.0, (double)i * 0.001, 1.0) == (int)i);
+    }
+    return grafo;
+}
+
+static void teste_euler_nao_aplicavel(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(2U);
+
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+    assert(grafo_verificar_euler(grafo) == EULER_NAO_APLICAVEL);
+    assert(grafo_verificar_euler(NULL) == EULER_NAO_APLICAVEL);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_triangulo_inconclusivo(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(3U);
+
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 1U, 2U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 0U, 2U) == 1);
+    assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_nao_planar(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(5U);
+    size_t i, j;
+
+    for (i = 0U; i < 5U; ++i)
+        for (j = i + 1U; j < 5U; ++j)
+            assert(grafo_adicionar_aresta(grafo, i, j) == 1);
+
+    assert(grafo_quantidade_arestas(grafo) == 10U);
+    assert(grafo_verificar_euler(grafo) == EULER_NAO_PLANAR);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_inconclusivo(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(6U);
+    size_t i, j;
+
+    for (i = 0U; i < 3U; ++i)
+        for (j = 3U; j < 6U; ++j)
+            assert(grafo_adicionar_aresta(grafo, i, j) == 1);
+
+    assert(grafo_quantidade_arestas(grafo) == 9U);
+    assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
 static void teste_quantidades_apos_construcao_automatica(void)
 {
     Grafo *grafo = grafo_criar();
@@ -149,6 +208,10 @@ int main(void)
     teste_acessa_vizinhos();
     teste_nao_adjacentes_e_vizinhos_vazios();
     teste_suporta_mil_vertices();
+    teste_euler_nao_aplicavel();          
+    teste_euler_triangulo_inconclusivo(); 
+    teste_euler_nao_planar();          
+    teste_euler_inconclusivo();
     teste_quantidades_apos_construcao_automatica();
     puts("Todos os testes passaram.");
     return 0;
