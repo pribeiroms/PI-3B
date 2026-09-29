@@ -172,6 +172,30 @@ static void teste_euler_inconclusivo(void)
 
     assert(grafo_quantidade_arestas(grafo) == 9U);
     assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+static void teste_quantidades_apos_construcao_automatica(void)
+{
+    Grafo *grafo = grafo_criar();
+    const size_t vertices_esperados = 5U;
+    size_t i, j;
+
+    assert(grafo != NULL);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 1U, -23.000, -46.000, 600.0) == 0);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 2U, -23.001, -46.000, 600.0) == 1);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 3U, -23.002, -46.000, 600.0) == 2);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 4U, -23.100, -46.100, 600.0) == 3);
+    assert(grafo_adicionar_antena(grafo, 999U, 9U, 90U, 5U, 10.000, 10.000, 600.0) == 4);
+
+    assert(grafo_quantidade_vertices(grafo) == vertices_esperados);
+    assert(grafo_quantidade_arestas(grafo) == 0U);
+
+    (void)grafo_construir_conexoes(grafo);
+
+    assert(grafo_quantidade_vertices(grafo) == vertices_esperados);
+    for (i = 0U; i < vertices_esperados; ++i)
+        for (j = i + 1U; j < vertices_esperados; ++j)
+            if (grafo_sao_adjacentes(grafo, i, j))
+                assert(grafo_sao_adjacentes(grafo, j, i));
+
     grafo_destruir(grafo);
 }
 
@@ -188,6 +212,7 @@ int main(void)
     teste_euler_triangulo_inconclusivo(); 
     teste_euler_nao_planar();          
     teste_euler_inconclusivo();
+    teste_quantidades_apos_construcao_automatica();
     puts("Todos os testes passaram.");
     return 0;
 }

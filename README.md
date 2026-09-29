@@ -46,7 +46,7 @@ mingw32-make clean
 No Windows sem `make`, compile diretamente com GCC:
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c -o grafo.exe
+gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/dataset.c -o grafo.exe -lm
 ./grafo.exe
 ```
 
