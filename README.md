@@ -46,12 +46,21 @@ mingw32-make clean
 No Windows sem `make`, compile diretamente com GCC:
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c -o grafo.exe -lm
+gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c src/execucao.c -o grafo.exe -lm
 ./grafo.exe
 ```
 
 O relatório parcial da issue #17 e suas dependências estão em
 [docs/ANALISE_PLANARIDADE.md](docs/ANALISE_PLANARIDADE.md).
+
+O fluxo parcial da #34 aceita opções e salva resultados em CSV:
+
+```sh
+./build/grafo.exe --limite 1000 --estrutura conjunta --saida results/execucoes.csv
+```
+
+Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso, validação
+e dependências de seleção entre estruturas, memória e contagem de cruzamentos.
 
 ## Próximos passos
 

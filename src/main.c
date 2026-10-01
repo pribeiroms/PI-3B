@@ -1,67 +1,80 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
 
-#include "dataset.h"
-#include "grafo.h"
 #include "analise_planaridade.h"
+#include "execucao.h"
 
 static double decorrido_ms(clock_t inicio, clock_t fim)
 {
+    if (inicio == (clock_t)-1 || fim == (clock_t)-1) return -1.0;
     return (double)(fim - inicio) * 1000.0 / CLOCKS_PER_SEC;
 }
 
 int main(int argc, char *argv[])
 {
-    const char *caminho = argc > 1 ? argv[1] : "data/opencellid_brasil_filtrado.csv";
-    size_t limite = argc > 2 ? (size_t)strtoul(argv[2], NULL, 10) : 1000U;
+    OpcoesExecucao opcoes;
+    ResultadoExecucao resultado = {0};
     char erro[128];
-    Grafo *grafo = grafo_criar();
-    ResultadoEuler euler;
-    RelatorioCarregamento relatorio;
+    Grafo *grafo;
     clock_t inicio, fim;
-    int cruzamentos;
-
+    int status = execucao_ler_opcoes(argc, argv, &opcoes);
+    if (status == 0) {
+        execucao_exibir_ajuda();
+        return 0;
+    }
+    if (status < 0) return 2;
+    grafo = grafo_criar();
     if (grafo == NULL) {
         fputs("Erro ao criar o grafo.\n", stderr);
         return 1;
     }
-
+    printf("Dataset: %s\nLimite de vertices: %zu (0 = todos)\n"
+           "Estruturas: lista e matriz simultaneas (modo conjunto).\n",
+           opcoes.dataset, opcoes.limite);
     inicio = clock();
-    if (!dataset_carregar_opencellid(grafo, caminho, limite, &relatorio, erro, sizeof(erro))) {
+    if (!dataset_carregar_opencellid(grafo, opcoes.dataset, opcoes.limite,
+            &resultado.carregamento, erro, sizeof(erro))) {
         fprintf(stderr, "Erro ao carregar dataset: %s\n", erro);
         grafo_destruir(grafo);
         return 1;
     }
     fim = clock();
-    printf("Leitura do dataset: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
-
-    if (relatorio.registros_carregados == 0U) {
+    resultado.leitura_ms = decorrido_ms(inicio, fim);
+    if (resultado.carregamento.registros_carregados == 0U) {
         fputs("Erro ao carregar dataset: nenhum registro valido encontrado.\n", stderr);
         grafo_destruir(grafo);
         return 1;
     }
-    printf("Registros invalidos ignorados: %zu\n", relatorio.registros_invalidos);
-
     inicio = clock();
     (void)grafo_construir_conexoes(grafo);
     fim = clock();
-    printf("Construcao do grafo: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
+    resultado.construcao_ms = decorrido_ms(inicio, fim);
+    resultado.vertices = grafo_quantidade_vertices(grafo);
+    resultado.arestas = grafo_quantidade_arestas(grafo);
 
     inicio = clock();
-    euler = grafo_verificar_euler(grafo);
+    resultado.euler = grafo_verificar_euler(grafo);
     fim = clock();
-    printf("Validacao por Euler: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
-
+    resultado.euler_ms = decorrido_ms(inicio, fim);
     inicio = clock();
-    cruzamentos = grafo_possui_cruzamentos(grafo);
+    resultado.possui_cruzamentos = grafo_possui_cruzamentos(grafo);
     fim = clock();
-    printf("Analise de cruzamentos: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
-
-    /* #16 ainda retorna apenas presenca; nao converter esse booleano em contagem. */
-    analise_planaridade_exibir(stdout, grafo_quantidade_vertices(grafo),
-        grafo_quantidade_arestas(grafo), euler, cruzamentos, NULL);
-
+    resultado.cruzamentos_ms = decorrido_ms(inicio, fim);
     grafo_destruir(grafo);
+
+    printf("Registros invalidos ignorados: %zu\n"
+           "Tempos de CPU em ms (-1 = indisponivel):\n"
+           "Leitura: %.3f\nConstrucao: %.3f\nEuler: %.3f\nCruzamentos: %.3f\n",
+           resultado.carregamento.registros_invalidos, resultado.leitura_ms,
+           resultado.construcao_ms, resultado.euler_ms, resultado.cruzamentos_ms);
+    puts("Consumo de memoria: indisponivel (pendente da #19).");
+    analise_planaridade_exibir(stdout, resultado.vertices, resultado.arestas,
+        resultado.euler, resultado.possui_cruzamentos, NULL);
+    if (!execucao_salvar(&opcoes, &resultado)) {
+        fprintf(stderr, "Erro ao salvar resultados em %s. Verifique o diretorio, "
+            "as permissoes e se o arquivo possui o cabecalho esperado.\n", opcoes.saida);
+        return 1;
+    }
+    printf("Resultados acrescentados em: %s\n", opcoes.saida);
     return 0;
 }
