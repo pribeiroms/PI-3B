@@ -19,7 +19,7 @@ DATASET_TEST_APP := $(BUILD_DIR)/test_dataset.exe
 all: $(APP)
 
 $(BUILD_DIR):
-	@cmd /C "if not exist \"$(BUILD_DIR)\" mkdir \"$(BUILD_DIR)\""
+	mkdir -p $(BUILD_DIR)
 
 $(APP): $(SRC) include/grafo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
@@ -46,4 +46,4 @@ test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP)
 	./$(DATASET_TEST_APP)
 
 clean:
-	@cmd /C "if exist \"$(BUILD_DIR)\" rmdir /S /Q \"$(BUILD_DIR)\""
+	rm -rf $(BUILD_DIR)
