@@ -270,6 +270,31 @@ const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice)
     return grafo->lista_adjacencia.listas[vertice];
 }
 
+int grafo_obter_segmento(const Grafo *grafo, size_t indice_aresta, Segmento *saida)
+{
+    Aresta aresta;
+
+    if (grafo == NULL || saida == NULL || indice_aresta >= grafo->quantidade_arestas)
+        return 0;
+    aresta = grafo->arestas[indice_aresta];
+    saida->inicio = grafo->vertices[aresta.origem].coordenadas;
+    saida->fim = grafo->vertices[aresta.destino].coordenadas;
+    return 1;
+}
+
+int grafo_arestas_compartilham_vertice(const Grafo *grafo, size_t aresta_a, size_t aresta_b)
+{
+    Aresta a, b;
+
+    if (grafo == NULL || aresta_a >= grafo->quantidade_arestas ||
+        aresta_b >= grafo->quantidade_arestas) return 0;
+    a = grafo->arestas[aresta_a];
+    b = grafo->arestas[aresta_b];
+    return a.origem == b.origem || a.origem == b.destino ||
+           a.destino == b.origem || a.destino == b.destino;
+}
+
+
 static double orientacao(const Vertice *a, const Vertice *b, const Vertice *c)
 {
     return (b->coordenadas.longitude - a->coordenadas.longitude) *
@@ -301,7 +326,7 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
    return 0;
   }
 
-    ResultadoEuler grafo_verificar_euler( const Grafo *grafo)
+  ResultadoEuler grafo_verificar_euler( const Grafo *grafo)
     {
       size_t v, e;
 
@@ -326,9 +351,11 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
       case EULER_NAO_APLICAVEL:
           return "A validacao de Euler nao se apliica";
       case EULER_NAO_PLANAR:
-          return "A validacao de Euler concluir que não e planar"; 
+          return "A validacao de Euler concluir que o grafo NAO e planar"; 
       case EULER_INCONCLUSIVO:
-          return "A validacao de Euler foi aceita, mas e inconclusiva ";
+          return "A validacao de Euler foi aceita, mas e analise baseada apenas "
+                 "em Euler nao e suficiente para garantir que o grafo seja planar."
+          ;
      }
 
     return "";
