@@ -62,6 +62,16 @@ O fluxo parcial da #34 aceita opções e salva resultados em CSV:
 Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso, validação
 e dependências de seleção entre estruturas, memória e contagem de cruzamentos.
 
+Para executar a validação integrada disponível da #35:
+
+```sh
+mingw32-make test-integracao
+```
+
+O teste gera logs, CSV e resumo em `results/integracao-<identificador>/`.
+Consulte [docs/TESTE_INTEGRACAO_FASE1.md](docs/TESTE_INTEGRACAO_FASE1.md)
+para os resultados observados e as pendências que impedem concluir a #35.
+
 ## Próximos passos
 
 1. Definir a representação do grafo em `include/grafo.h` e `src/grafo.c`.

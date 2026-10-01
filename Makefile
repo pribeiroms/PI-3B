@@ -15,7 +15,7 @@ CONEXOES_TEST_SRC := tests/test_conexoes_geograficas.c src/grafo.c
 DATASET_TEST_SRC := tests/test_dataset.c src/dataset.c src/grafo.c
 DATASET_TEST_APP := $(BUILD_DIR)/test_dataset.exe
 
-.PHONY: all run test test-fluxo clean
+.PHONY: all run test test-fluxo test-integracao clean
 
 all: $(APP)
 
@@ -42,6 +42,9 @@ run: $(APP)
 
 test-fluxo: $(APP)
 	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_fluxo_parcial.ps1
+
+test-integracao: test test-fluxo
+	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_integracao_fase1.ps1
 
 $(ANALISE_TEST_APP): tests/test_analise_planaridade.c src/analise_planaridade.c include/analise_planaridade.h include/grafo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) tests/test_analise_planaridade.c src/analise_planaridade.c -o $@ $(LDFLAGS)
