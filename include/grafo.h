@@ -42,6 +42,11 @@ typedef struct {
 	size_t ordem;
 } MatrizAdjacencia;
 
+typedef struct {
+	CoordenadaGeografica inicio;
+	CoordenadaGeografica fim;
+} Segmento;
+
 /* Cria um grafo vazio. Retorna NULL caso a alocação falhe. */
 Grafo *grafo_criar(void);
 
@@ -89,5 +94,10 @@ ResultadoEuler grafo_verificar_euler( const Grafo *grafo);
 
 /*Retorna um texto explicativo do resultado, para exibir ao usuario*/
 const char *grafo_mensagem_euler(ResultadoEuler resultado);
+
+/*Obtem o segmento de duas antenas de uma aresta*/
+int grafo_obter_segmento(const Grafo *grafo, size_t indice_aresta, Segmento *saida);
+
+int grafo_arestas_compartilham_vertice(const Grafo *grafo, size_t aresta_a, size_t aresta_b);
 
 #endif
