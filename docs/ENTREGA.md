@@ -13,3 +13,34 @@
 - Um módulo possui um cabeçalho em `include/` e uma implementação correspondente em `src/`.
 - Cada novo algoritmo deve ter testes de casos típicos, casos-limite e entradas inválidas.
 - Não incluir binários nem arquivos temporários no repositório.
+
+## Estado da entrega
+
+**Ainda não liberada.** A revisão parcial da #36 está em
+[REVISAO_FASE1.md](REVISAO_FASE1.md). As #17, #34 e #35 possuem entregas parciais;
+os testes disponíveis não substituem o fechamento de suas pendências.
+
+## Documentos para conferência
+
+- [Dataset e rastreabilidade](DATASET.md).
+- [Modelagem](MODELAGEM_GRAFO.md).
+- [Análise de planaridade](ANALISE_PLANARIDADE.md).
+- [Fluxo e formato dos resultados](FLUXO_APLICACAO.md).
+- [Validação integrada e evidências](TESTE_INTEGRACAO_FASE1.md).
+
+O artigo, a documentação completa dos algoritmos e os resultados finais de
+benchmark devem ser disponibilizados pelos responsáveis para revisão.
+
+## Sequência antes da liberação
+
+1. Concluir componentes e integração pendentes, documentando o estado real.
+2. Executar `mingw32-make all test-integracao` em uma cópia limpa da versão candidata.
+3. Confirmar que a #35 valida toda a aplicação, sem dependências bloqueadas.
+4. Conferir resultados experimentais finais, documentação, artigo e issues.
+5. Obter revisão de outro integrante nos PRs, conforme `CONTRIBUTING.md`.
+6. Integrar somente a versão validada em `main` e repetir a verificação nessa
+   versão. Registrar o commit final e os comandos usados para reproduzi-la.
+
+Não usar palavras de fechamento de issue em entregas parciais. Os arquivos
+gerados em `results/` permanecem locais; combinar com a equipe como apresentar
+as evidências finais sem violar a regra de não versionar saídas temporárias.

@@ -1,6 +1,11 @@
 # Projeto Integrador 3B — Grafos em C
 
-Base inicial para o desenvolvimento autoral de estruturas de dados e algoritmos de grafos, atendendo ao RNF01 e aos requisitos de entrega do projeto.
+Aplicação em C para modelar uma rede de telecomunicações como grafo e analisar
+a condição necessária de Euler e cruzamentos no traçado das conexões.
+
+A Fase I está **parcialmente integrada**: o modo atual mantém lista e matriz
+simultaneamente. Seleção exclusiva da estrutura, medição de memória e contagem
+de cruzamentos ainda estão pendentes. A revisão da #36 não libera a entrega final.
 
 ## Estrutura
 
@@ -15,8 +20,12 @@ docs/      Documentação técnica e de entrega
 
 ## Pré-requisitos
 
-- Compilador C compatível com C11 (GCC, Clang ou MinGW)
-- `make` ou `mingw32-make` (opcional, recomendado)
+- Ambiente validado: Windows com MinGW GCC 6.3.0 e `mingw32-make`.
+- PowerShell para os roteiros de teste do fluxo e de integração.
+- Executar os comandos na raiz do projeto; os caminhos padrão são relativos a ela.
+
+O código usa C11. O Makefile e os roteiros atuais contêm comandos específicos de
+Windows; execução em outros sistemas ainda não foi validada.
 
 ## Compilação e execução
 
@@ -72,12 +81,12 @@ O teste gera logs, CSV e resumo em `results/integracao-<identificador>/`.
 Consulte [docs/TESTE_INTEGRACAO_FASE1.md](docs/TESTE_INTEGRACAO_FASE1.md)
 para os resultados observados e as pendências que impedem concluir a #35.
 
-## Próximos passos
+## Revisão e entrega
 
-1. Definir a representação do grafo em `include/grafo.h` e `src/grafo.c`.
-2. Implementar algoritmos autorais em novos módulos de `src/`.
-3. Criar testes correspondentes em `tests/`.
-4. Registrar datasets, metodologia e resultados em `data/`, `docs/` e `results/`.
+A revisão parcial da #36, os critérios de liberação e as pendências estão em
+[docs/REVISAO_FASE1.md](docs/REVISAO_FASE1.md).
+O [guia de entrega](docs/ENTREGA.md) organiza os documentos e a sequência final
+de validação. Passar nos testes do fluxo disponível não conclui a Fase I.
 
 ## Contribuição
 

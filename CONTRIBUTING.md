@@ -5,6 +5,13 @@ repositório organizado, rastreável e pronto para entrega.
 
 ## Branches
 
+**Nota da revisão #36:** nas referências locais consultadas em 01/10/2026, a
+branch usada para integração é `origin/feature/dev`; não há `origin/develop`.
+As menções a `develop` abaixo descrevem o fluxo originalmente acordado.
+Confirmar o destino efetivo no GitHub antes de abrir um PR; não criar ou renomear
+branches apenas para coincidir com este guia. Também há diferenças nos nomes
+individuais remotos (`miguel-dev` e `feacture/andre-dev`). Consultar `git branch -r`.
+
 - `main`: versão final, estável e entregue do projeto. Não recebe commits diretos.
 - `develop`: branch de integração, compilação e testes das funcionalidades.
 - `feature/paula-dev`
