@@ -68,3 +68,19 @@ Use `0` como limite para carregar todos os registros válidos. A rotina de cruza
 ## Limites para uso em artigo científico
 
 Uma análise ou artigo deve informar pelo menos: versão/data do arquivo e sua procedência; limite e critérios de registros carregados; número de vértices e arestas obtidos; distribuição geográfica da amostra; regra de distância e seleção de vizinhos; método de detecção de cruzamentos; e limitações da representação. A documentação atual especifica o método implementado, mas resultados quantitativos devem ser medidos em cada execução e registrados com a respectiva amostra. A interpretação deve manter explícita a diferença entre posição estimada de célula e localização/rota real de infraestrutura.
+
+## Validação de planaridade (Euler)
+
+Com base na fórmula de Euler, todo grafo simples planar com V >= 3 satisfaz:
+
+`E <= 3V - 6`
+
+onde V é o número de vértices e E é o número de arestas.
+
+Essa desigualdade é usada para validar a planaridade do grafo, mas é uma condição **necessária, não suficiente**.
+
+**Violada** (E > 3V - 6): o grafo é certamente **não planar**.
+
+**Aceita** (E <= 3V - 6): o resultado é **inconclusivo**. A análise baseada apenas em Euler não garante que o grafo seja planar (contraexemplo: K3,3, com V = 6 e E = 9, que satisfaz a condição mas não é planar).
+
+**V < 3**: a condição não se aplica.

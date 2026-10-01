@@ -270,6 +270,31 @@ const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice)
     return grafo->lista_adjacencia.listas[vertice];
 }
 
+int grafo_obter_segmento(const Grafo *grafo, size_t indice_aresta, Segmento *saida)
+{
+    Aresta aresta;
+
+    if (grafo == NULL || saida == NULL || indice_aresta >= grafo->quantidade_arestas)
+        return 0;
+    aresta = grafo->arestas[indice_aresta];
+    saida->inicio = grafo->vertices[aresta.origem].coordenadas;
+    saida->fim = grafo->vertices[aresta.destino].coordenadas;
+    return 1;
+}
+
+int grafo_arestas_compartilham_vertice(const Grafo *grafo, size_t aresta_a, size_t aresta_b)
+{
+    Aresta a, b;
+
+    if (grafo == NULL || aresta_a >= grafo->quantidade_arestas ||
+        aresta_b >= grafo->quantidade_arestas) return 0;
+    a = grafo->arestas[aresta_a];
+    b = grafo->arestas[aresta_b];
+    return a.origem == b.origem || a.origem == b.destino ||
+           a.destino == b.origem || a.destino == b.destino;
+}
+
+
 static double orientacao(const Vertice *a, const Vertice *b, const Vertice *c)
 {
     return (b->coordenadas.longitude - a->coordenadas.longitude) *
@@ -298,5 +323,40 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
                 ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0))) return 1;
         }
     }
-    return 0;
-}
+   return 0;
+  }
+
+  ResultadoEuler grafo_verificar_euler( const Grafo *grafo)
+    {
+      size_t v, e;
+
+    if (grafo == NULL) return EULER_NAO_APLICAVEL;
+    v = grafo->quantidade_vertices;
+    e = grafo->quantidade_arestas;
+
+    /* A desigualdade so vale para V >= 3. Este teste vem ANTES da conta
+     * 3V-6, pois size_t nao tem sinal e daria underflow com V = 1 ou 2. */
+    if (v < 3U) return EULER_NAO_APLICAVEL;
+
+    /* Condicao necessaria: E <= 3V - 6. Se violada, nao e planar. */
+    if (e > 3U * v - 6U) return EULER_NAO_PLANAR;
+
+    /* Satisfeita, mas Euler sozinho NAO garante planaridade (ex.: K3,3). */
+    return EULER_INCONCLUSIVO;
+    }
+
+    const char *grafo_mensagem_euler(ResultadoEuler resultado)
+    {
+     switch(resultado){
+      case EULER_NAO_APLICAVEL:
+          return "A validacao de Euler nao se apliica";
+      case EULER_NAO_PLANAR:
+          return "A validacao de Euler concluir que o grafo NAO e planar"; 
+      case EULER_INCONCLUSIVO:
+          return "A validacao de Euler foi aceita, mas e analise baseada apenas "
+                 "em Euler nao e suficiente para garantir que o grafo seja planar."
+          ;
+     }
+
+    return "";
+    }

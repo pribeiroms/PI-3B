@@ -113,6 +113,68 @@ static void teste_suporta_mil_vertices(void)
     grafo_destruir(grafo);
 }
 
+static Grafo *criar_grafo_com_vertices(size_t quantidade)
+{
+    Grafo *grafo = grafo_criar();
+    size_t i;
+
+    assert(grafo != NULL);
+    for (i = 0U; i < quantidade; ++i) {
+        assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, (unsigned int)i,
+                                      0.0, (double)i * 0.001, 1.0) == (int)i);
+    }
+    return grafo;
+}
+
+static void teste_euler_nao_aplicavel(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(2U);
+
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+    assert(grafo_verificar_euler(grafo) == EULER_NAO_APLICAVEL);
+    assert(grafo_verificar_euler(NULL) == EULER_NAO_APLICAVEL);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_triangulo_inconclusivo(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(3U);
+
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 1U, 2U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 0U, 2U) == 1);
+    assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_nao_planar(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(5U);
+    size_t i, j;
+
+    for (i = 0U; i < 5U; ++i)
+        for (j = i + 1U; j < 5U; ++j)
+            assert(grafo_adicionar_aresta(grafo, i, j) == 1);
+
+    assert(grafo_quantidade_arestas(grafo) == 10U);
+    assert(grafo_verificar_euler(grafo) == EULER_NAO_PLANAR);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_inconclusivo(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(6U);
+    size_t i, j;
+
+    for (i = 0U; i < 3U; ++i)
+        for (j = 3U; j < 6U; ++j)
+            assert(grafo_adicionar_aresta(grafo, i, j) == 1);
+
+    assert(grafo_quantidade_arestas(grafo) == 9U);
+    assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+    grafo_destruir(grafo);
+}
+
 static void teste_quantidades_apos_construcao_automatica(void)
 {
     Grafo *grafo = grafo_criar();
@@ -140,6 +202,45 @@ static void teste_quantidades_apos_construcao_automatica(void)
     grafo_destruir(grafo);
 }
 
+static void teste_obtem_segmento_da_aresta(void)
+{
+    Grafo *grafo = grafo_criar();
+    Segmento segmento;
+
+    assert(grafo != NULL);
+    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 1U, -23.0, -46.0, 1.0) == 0);
+    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 2U, -22.5, -45.5, 1.0) == 1);
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+
+    assert(grafo_obter_segmento(grafo, 0U, &segmento) == 1);
+    assert(segmento.inicio.latitude == -23.0);
+    assert(segmento.inicio.longitude == -46.0);
+    assert(segmento.fim.latitude == -22.5);
+    assert(segmento.fim.longitude == -45.5);
+
+    /* entradas invalidas */
+    assert(grafo_obter_segmento(grafo, 1U, &segmento) == 0);
+    assert(grafo_obter_segmento(grafo, 0U, NULL) == 0);
+    assert(grafo_obter_segmento(NULL, 0U, &segmento) == 0);
+    grafo_destruir(grafo);
+}
+
+static void teste_arestas_compartilham_vertice(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(4U);
+
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 1U, 2U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 2U, 3U) == 1);
+
+    assert(grafo_arestas_compartilham_vertice(grafo, 0U, 1U) == 1);
+    assert(grafo_arestas_compartilham_vertice(grafo, 1U, 2U) == 1);
+    assert(grafo_arestas_compartilham_vertice(grafo, 0U, 2U) == 0);
+    assert(grafo_arestas_compartilham_vertice(grafo, 0U, 9U) == 0);
+    assert(grafo_arestas_compartilham_vertice(NULL, 0U, 1U) == 0);
+    grafo_destruir(grafo);
+}
+
 int main(void)
 {
     teste_cria_e_destroi_grafo();
@@ -149,7 +250,13 @@ int main(void)
     teste_acessa_vizinhos();
     teste_nao_adjacentes_e_vizinhos_vazios();
     teste_suporta_mil_vertices();
+    teste_euler_nao_aplicavel();
+    teste_euler_triangulo_inconclusivo();
+    teste_euler_nao_planar();
+    teste_euler_inconclusivo();
     teste_quantidades_apos_construcao_automatica();
+    teste_obtem_segmento_da_aresta();
+    teste_arestas_compartilham_vertice();
     puts("Todos os testes passaram.");
     return 0;
 }

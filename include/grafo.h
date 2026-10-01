@@ -42,6 +42,11 @@ typedef struct {
 	size_t ordem;
 } MatrizAdjacencia;
 
+typedef struct {
+	CoordenadaGeografica inicio;
+	CoordenadaGeografica fim;
+} Segmento;
+
 /* Cria um grafo vazio. Retorna NULL caso a alocação falhe. */
 Grafo *grafo_criar(void);
 
@@ -76,5 +81,23 @@ int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino);
 
 /* Retorna o inicio da lista ligada de vizinhos de um vertice, ou NULL se invalido/sem vizinhos. */
 const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice);
+
+/* Criar os Resultados das validacoes de planaridade com base na fórmula de Euler*/
+typedef enum{
+  EULER_NAO_APLICAVEL,   /*Nao se aplica a formula */
+  EULER_NAO_PLANAR,      /*E > 3V-6: certamente não é planar*/  
+  EULER_INCONCLUSIVO     /*Não tem certeza de Planaridade*/
+}ResultadoEuler;
+
+/*Função que verifica a condição da formula  E <= 3V - 6 (Grafo Simples)*/ 
+ResultadoEuler grafo_verificar_euler( const Grafo *grafo);
+
+/*Retorna um texto explicativo do resultado, para exibir ao usuario*/
+const char *grafo_mensagem_euler(ResultadoEuler resultado);
+
+/*Obtem o segmento de duas antenas de uma aresta*/
+int grafo_obter_segmento(const Grafo *grafo, size_t indice_aresta, Segmento *saida);
+
+int grafo_arestas_compartilham_vertice(const Grafo *grafo, size_t aresta_a, size_t aresta_b);
 
 #endif
