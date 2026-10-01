@@ -171,7 +171,10 @@ static void teste_euler_inconclusivo(void)
             assert(grafo_adicionar_aresta(grafo, i, j) == 1);
 
     assert(grafo_quantidade_arestas(grafo) == 9U);
-    assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+        assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+    grafo_destruir(grafo);
+}
+
 static void teste_quantidades_apos_construcao_automatica(void)
 {
     Grafo *grafo = grafo_criar();
