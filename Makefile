@@ -7,7 +7,8 @@ APP := $(BUILD_DIR)/grafo.exe
 TEST_APP := $(BUILD_DIR)/test_grafo.exe
 OPERACOES_TEST_APP := $(BUILD_DIR)/test_operacoes_grafo.exe
 CONEXOES_TEST_APP := $(BUILD_DIR)/test_conexoes_geograficas.exe
-SRC := src/main.c src/grafo.c src/dataset.c
+SRC := src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c
+ANALISE_TEST_APP := $(BUILD_DIR)/test_analise_planaridade.exe
 TEST_SRC := tests/test_grafo.c src/grafo.c
 OPERACOES_TEST_SRC := tests/test_operacoes_grafo.c src/grafo.c
 CONEXOES_TEST_SRC := tests/test_conexoes_geograficas.c src/grafo.c
@@ -21,7 +22,7 @@ all: $(APP)
 $(BUILD_DIR):
 	@cmd /C "if not exist \"$(BUILD_DIR)\" mkdir \"$(BUILD_DIR)\""
 
-$(APP): $(SRC) include/grafo.h | $(BUILD_DIR)
+$(APP): $(SRC) include/grafo.h include/analise_planaridade.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
 
 $(TEST_APP): $(TEST_SRC) include/grafo.h | $(BUILD_DIR)
@@ -39,11 +40,15 @@ $(DATASET_TEST_APP): $(DATASET_TEST_SRC) include/grafo.h include/dataset.h | $(B
 run: $(APP)
 	./$(APP)
 
-test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP)
+$(ANALISE_TEST_APP): tests/test_analise_planaridade.c src/analise_planaridade.c include/analise_planaridade.h include/grafo.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) tests/test_analise_planaridade.c src/analise_planaridade.c -o $@ $(LDFLAGS)
+
+test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP)
 	./$(TEST_APP)
 	./$(OPERACOES_TEST_APP)
 	./$(CONEXOES_TEST_APP)
 	./$(DATASET_TEST_APP)
+	./$(ANALISE_TEST_APP)
 
 clean:
 	@cmd /C "if exist \"$(BUILD_DIR)\" rmdir /S /Q \"$(BUILD_DIR)\""

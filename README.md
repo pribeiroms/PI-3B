@@ -46,9 +46,12 @@ mingw32-make clean
 No Windows sem `make`, compile diretamente com GCC:
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/dataset.c -o grafo.exe -lm
+gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c -o grafo.exe -lm
 ./grafo.exe
 ```
+
+O relatório parcial da issue #17 e suas dependências estão em
+[docs/ANALISE_PLANARIDADE.md](docs/ANALISE_PLANARIDADE.md).
 
 ## Próximos passos
 

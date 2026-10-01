@@ -4,6 +4,7 @@
 
 #include "dataset.h"
 #include "grafo.h"
+#include "analise_planaridade.h"
 
 static double decorrido_ms(clock_t inicio, clock_t fim)
 {
@@ -47,25 +48,19 @@ int main(int argc, char *argv[])
     fim = clock();
     printf("Construcao do grafo: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
 
-    printf("Vertices: %zu\nArestas sem peso: %zu\n", grafo_quantidade_vertices(grafo),
-        grafo_quantidade_arestas(grafo));
-
     inicio = clock();
     euler = grafo_verificar_euler(grafo);
     fim = clock();
     printf("Validacao por Euler: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
-    puts(grafo_mensagem_euler(euler));
 
     inicio = clock();
     cruzamentos = grafo_possui_cruzamentos(grafo);
     fim = clock();
     printf("Analise de cruzamentos: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
 
-    if (cruzamentos) {
-        puts("Resultado: existem cruzamentos; a planta exige isolamento ou novas rotas.");
-    } else {
-        puts("Resultado: nao foram encontrados cruzamentos na planta analisada.");
-    }
+    /* #16 ainda retorna apenas presenca; nao converter esse booleano em contagem. */
+    analise_planaridade_exibir(stdout, grafo_quantidade_vertices(grafo),
+        grafo_quantidade_arestas(grafo), euler, cruzamentos, NULL);
 
     grafo_destruir(grafo);
     return 0;
