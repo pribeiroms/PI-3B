@@ -559,3 +559,40 @@ int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa
     estimativa->memoria_matriz_total_bytes = matriz_total;
     return 1;
 }
+int grafo_obter_segmento(const Grafo *grafo, size_t indice_aresta, Segmento *saida)
+{
+    Aresta aresta;
+
+    if (grafo == NULL || saida == NULL || indice_aresta >= grafo->quantidade_arestas)
+        return 0;
+    aresta = grafo->arestas[indice_aresta];
+    saida->inicio = grafo->vertices[aresta.origem].coordenadas;
+    saida->fim = grafo->vertices[aresta.destino].coordenadas;
+    return 1;
+}
+
+int grafo_arestas_compartilham_vertice(const Grafo *grafo, size_t aresta_a, size_t aresta_b)
+{
+    Aresta a, b;
+
+    if (grafo == NULL || aresta_a >= grafo->quantidade_arestas ||
+        aresta_b >= grafo->quantidade_arestas) return 0;
+    a = grafo->arestas[aresta_a];
+    b = grafo->arestas[aresta_b];
+    return a.origem == b.origem || a.origem == b.destino ||
+        a.destino == b.origem || a.destino == b.destino;
+}
+
+int grafo_segmentos_se_cruzam(Segmento a, Segmento b)
+{
+    return segmentos_se_cruzam(a, b);
+}
+
+int grafo_obter_aresta(const Grafo *grafo, size_t indice_aresta, size_t *origem, size_t *destino)
+{
+    if (grafo == NULL || origem == NULL || destino == NULL ||
+        indice_aresta >= grafo->quantidade_arestas) return 0;
+    *origem = grafo->arestas[indice_aresta].origem;
+    *destino = grafo->arestas[indice_aresta].destino;
+    return 1;
+}

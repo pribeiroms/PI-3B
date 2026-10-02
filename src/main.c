@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
 #include "analise_planaridade.h"
@@ -13,9 +14,9 @@ static double decorrido_ms(clock_t inicio, clock_t fim)
 static const char *nome_estrutura(EstruturaGrafo estrutura)
 {
     switch (estrutura) {
-        case GRAFO_LISTA_ADJACENCIA: return "lista de adjacencia";
-        case GRAFO_MATRIZ_ADJACENCIA: return "matriz de adjacencia";
-        default: return "lista e matriz simultaneas (conjunta)";
+    case GRAFO_LISTA_ADJACENCIA: return "lista de adjacencia";
+    case GRAFO_MATRIZ_ADJACENCIA: return "matriz de adjacencia";
+    default: return "lista e matriz simultaneas (conjunta)";
     }
 }
 
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
     char erro[128];
     Grafo *grafo;
     size_t quantidade_cruzamentos;
+    Cruzamento *cruzamentos;
     clock_t inicio, fim, inicio_total, fim_total;
     int status = execucao_ler_opcoes(argc, argv, &opcoes);
     if (status == 0) {
@@ -40,11 +42,11 @@ int main(int argc, char *argv[])
         return 1;
     }
     printf("Dataset: %s\nLimite de vertices: %zu (0 = todos)\n"
-           "Estrutura: %s.\n", opcoes.dataset, opcoes.limite,
-           nome_estrutura(opcoes.estrutura));
+        "Estrutura: %s.\n", opcoes.dataset, opcoes.limite,
+        nome_estrutura(opcoes.estrutura));
     inicio = clock();
     if (!dataset_carregar_opencellid(grafo, opcoes.dataset, opcoes.limite,
-            &resultado.carregamento, erro, sizeof(erro))) {
+        &resultado.carregamento, erro, sizeof(erro))) {
         fprintf(stderr, "Erro ao carregar dataset: %s\n", erro);
         grafo_destruir(grafo);
         return 1;
@@ -70,30 +72,47 @@ int main(int argc, char *argv[])
     resultado.euler = grafo_verificar_euler(grafo);
     fim = clock();
     resultado.euler_ms = decorrido_ms(inicio, fim);
+
     inicio = clock();
-    quantidade_cruzamentos = grafo_detectar_cruzamentos(grafo, NULL);
+    quantidade_cruzamentos = grafo_detectar_cruzamentos(grafo, &cruzamentos);
     resultado.quantidade_cruzamentos = quantidade_cruzamentos;
     resultado.possui_cruzamentos = quantidade_cruzamentos > 0U;
     fim = clock();
     resultado.cruzamentos_ms = decorrido_ms(inicio, fim);
+
     resultado.memoria_disponivel = grafo_estimar_memoria(grafo, &resultado.memoria);
+
+    printf("Registros invalidos ignorados: %zu\n"
+        "Tempos de CPU em ms (-1 = indisponivel):\n"
+        "Leitura: %.3f\nConstrucao: %.3f\nEuler: %.3f\nCruzamentos: %.3f\n",
+        resultado.carregamento.registros_invalidos, resultado.leitura_ms,
+        resultado.construcao_ms, resultado.euler_ms, resultado.cruzamentos_ms);
+
+    if (quantidade_cruzamentos > 0U) {
+        size_t i;
+        puts("Detalhamento dos cruzamentos:");
+        for (i = 0U; i < quantidade_cruzamentos; ++i) {
+            size_t origem_a, destino_a, origem_b, destino_b;
+            grafo_obter_aresta(grafo, cruzamentos[i].aresta_a, &origem_a, &destino_a);
+            grafo_obter_aresta(grafo, cruzamentos[i].aresta_b, &origem_b, &destino_b);
+            printf("  Aresta %zu (antenas %zu-%zu) x Aresta %zu (antenas %zu-%zu)\n",
+                cruzamentos[i].aresta_a, origem_a, destino_a,
+                cruzamentos[i].aresta_b, origem_b, destino_b);
+        }
+    }
+    free(cruzamentos);
+
     grafo_destruir(grafo);
     fim_total = clock();
     resultado.total_cpu_ms = decorrido_ms(inicio_total, fim_total);
+    printf("Total da execucao: %.3f\n", resultado.total_cpu_ms);
 
-    printf("Registros invalidos ignorados: %zu\n"
-           "Tempos de CPU em ms (-1 = indisponivel):\n"
-           "Leitura: %.3f\nConstrucao: %.3f\nEuler: %.3f\nCruzamentos: %.3f\n"
-           "Total da execucao: %.3f\n",
-           resultado.carregamento.registros_invalidos, resultado.leitura_ms,
-           resultado.construcao_ms, resultado.euler_ms, resultado.cruzamentos_ms,
-           resultado.total_cpu_ms);
     if (resultado.memoria_disponivel) {
         printf("Memoria estimada em bytes (modelo das alocacoes do grafo):\n"
-               "Comum: %zu\nLista de adjacencia: %zu\nMatriz de adjacencia: %zu\n",
-               resultado.memoria.memoria_comum_bytes,
-               resultado.memoria.memoria_lista_total_bytes,
-               resultado.memoria.memoria_matriz_total_bytes);
+            "Comum: %zu\nLista de adjacencia: %zu\nMatriz de adjacencia: %zu\n",
+            resultado.memoria.memoria_comum_bytes,
+            resultado.memoria.memoria_lista_total_bytes,
+            resultado.memoria.memoria_matriz_total_bytes);
     } else {
         puts("Estimativa de memoria: indisponivel (overflow ou entrada invalida).");
     }
