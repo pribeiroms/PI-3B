@@ -1,84 +1,83 @@
-# Revisão do repositório — #36 (parcial)
+# Revisão do repositório — issue #36
 
-**Situação: não liberado para entrega final.** Revisão realizada em 01/10/2026
-na `feature/paula-dev`, com base no commit `f6fa594`. Não houve merge em `main`,
-fechamento de issues ou aprovação de PRs nesta revisão.
+**Revisão local atualizada em 02/10/2026. Situação: entrega final ainda não
+liberada.** O fluxo funcional da aplicação e o teste integral da #35 foram
+validados nesta branch; a branch principal, o estado remoto de PRs/issues, o
+artigo e os resultados experimentais restantes não foram aprovados nesta
+revisão.
 
-## Verificações realizadas
+## Resumo da auditoria local
 
-| Item da #36 | Resultado e limite |
+| Verificação | Resultado |
 | --- | --- |
-| Compilação | Cópia local independente do commit `f6fa594`, sem binários anteriores, compilada com C11 e `-Wall -Wextra -Wpedantic -Werror` |
-| Funcionamento | Testes unitários, fluxo parcial e integração disponível passaram nessa cópia |
-| Organização | Módulos em `src/` e `include/`, testes em `tests/`, documentos em `docs/`, dataset em `data/` |
-| Commits | `bcd6128`, `060c64f` e `f6fa594` referenciam #17, #34 e #35 sem palavras de fechamento |
-| Pull Requests | Aprovações e destino efetivo ainda precisam ser confirmados no GitHub; histórico de merges não comprova revisão dos commits atuais |
-| Branches | Referências locais mostram `feature/dev` como integração; discrepância com `develop` registrada em `CONTRIBUTING.md` |
-| README | Corrigidos texto de base inicial, próximos passos já executados e pré-requisitos; estado parcial explícito |
-| Dataset | Arquivo versionado: 62.604 registros; contagens por tecnologia e hash conferidos |
-| Resultados experimentais | Registros dos recortes reais reproduzidos pela #35; não são benchmarks finais de lista versus matriz |
-| Documentação | Índice de entrega e dependências consolidados; documentação completa dos algoritmos ainda requer revisão da entrega do responsável |
-| Artigo | Nenhum arquivo de artigo identificado no inventário versionado da branch; solicitar fonte/documento e conteúdo para revisão |
-| Issues pendentes | Dependências conhecidas registradas abaixo; lista atual completa e responsáveis precisam de confirmação no GitHub |
-| Versão principal | `origin/main` local aponta para `50396ee`; não contém os três commits parciais acima. A estabilidade da versão final de `main` ainda não foi validada |
+| Compilação e testes | `mingw32-make test-integracao` executado nesta revisão; testes unitários e fluxo #34 passaram. O teste integral #35 foi executado nos modos lista e matriz. |
+| Funcionamento | Dataset real completo processado; detalhes e limites em [TESTE_INTEGRACAO_FASE1.md](TESTE_INTEGRACAO_FASE1.md). |
+| Organização | Código em `src/` e `include/`, testes em `tests/`, dados versionados em `data/` e documentação em `docs/`. |
+| Dataset | Dataset OpenCelliD filtrado está versionado. A execução integral registrou hash e contagens no resumo de teste local. |
+| Resultados experimentais | Há subconjuntos de estresse e CSV bruto do benchmark de lista. Não há benchmark equivalente da matriz nem conjunto completo de gráficos/análises finais. |
+| Documentação | Guias de fluxo, modelagem, planaridade, memória, protocolo experimental e integração presentes. Este documento atualiza o estado obsoleto da revisão parcial. |
+| Artigo | Não foi encontrado artigo/fonte de artigo entre os arquivos versionados (`git ls-files`). É necessário incluir o documento para revisar metodologia e conclusões. |
+| Binários e saídas | `build/` e `results/` são ignorados; somente `results/.gitkeep` está versionado. |
+| Branches e commits | Auditoria local abaixo; não representa confirmação atual do servidor GitHub. |
 
-As referências remotas acima são o retrato local consultado, não uma auditoria
-atualizada dos estados de PRs e issues no servidor. A consulta web disponível
-não permitiu confirmar os PRs atuais e mostrou dados de issues em cache;
-por isso não é usada para declarar aprovações ou fechamentos.
+## Evidência da integração
 
-## Reprodutibilidade conferida
-
-Foi criado um clone local independente, sem hardlinks, da `feature/paula-dev`
-em uma pasta nova de `build/`. Nesse clone foram executados:
+Na branch local `feature/paula-dev`, `HEAD` é `012ec1f` (`test(integration):
+validate full dataset on both structures #35`), com `origin/feature/paula-dev`
+apontando para o mesmo commit no último estado local consultado. O comando
+executado nesta revisão foi:
 
 ```powershell
-mingw32-make all test-integracao
+mingw32-make test-integracao
 ```
 
-Resultado: compilação sem avisos com MinGW GCC 6.3.0, cinco executáveis de testes
-unitários aprovados, roteiro da #34 aprovado e validação parcial da #35 aprovada.
-A validação de integração usa 1, 100 e 1.000 registros reais, com repetição de
-1.000. Não processa todo o dataset, não certifica alternância entre estruturas
-e não mede memória. O procedimento valida os arquivos versionados da branch,
-mas não substitui um clone do remoto e teste do commit final de `main`.
+Os cinco executáveis de teste e o roteiro de fluxo da #34 passaram. O roteiro
+com `-ExigirCompleto` processa o dataset inteiro separadamente em lista e
+matriz compacta. Os resultados registrados em
+[TESTE_INTEGRACAO_FASE1.md](TESTE_INTEGRACAO_FASE1.md) mostram 61.933 vértices,
+38.131 arestas e 10.211 cruzamentos em cada modo, sem divergência funcional.
+Tempos e memória são estimativas/medições daquele ambiente e não comprovam
+desempenho geral nem correção matemática completa. Falha de alocação não foi
+injetada.
 
-Os logs e CSVs foram gerados no diretório `results/integracao-<id>/` dessa cópia,
-com parâmetros, hashes e metadados de reprodução. Apenas `results/.gitkeep`
-está versionado em `results/`; não foram encontrados executáveis, objetos ou
-logs versionados. As saídas temporárias permanecem ignoradas pelo Git.
+Os commits locais relevantes incluem `47fb17f` (#17), `79dc246` (#28),
+`0abf6f4` (#34) e `012ec1f` (#35). Eles não incluem palavras de fechamento de
+issue; commits por si só não fecham issues no GitHub.
 
-## Correções documentais desta revisão
+## Branches e Pull Requests
 
-- README descreve o estado implementado e o ambiente realmente validado.
-- Guia de contribuição registra as diferenças entre nomes planejados e reais
-  das branches, sem renomear branches dos colegas.
-- Documento do dataset deixa claro que pesos e filtros por tecnologia/região
-  não fazem parte da interface atual; a regra descrita corresponde ao código.
-- Guia de entrega passa a apontar os documentos existentes e os critérios de
-  liberação, sem apresentar uma entrega parcial como concluída.
+No último retrato local, `main` e `feature/dev` apontam para `50396ee`, enquanto
+`feature/paula-dev` está em `012ec1f`. A comparação local indica divergência:
+`origin/feature/dev...HEAD` tem 14 commits exclusivos de cada lado; o diff de
+`origin/main` até a branch contém 39 arquivos e inclui várias issues, não só
+#34/#35. Portanto, não se deve tratar o conteúdo como já integrado nem abrir um
+PR amplo sem revisar a base, o destino e o escopo.
 
-## Pendências para concluir a #36
+Este ambiente não tem acesso autenticado ao GitHub para confirmar PRs abertos,
+aprovações, checks, issues em aberto ou atualizar seus estados. As referências
+`origin/*` são apenas o último retrato local consultado. A regra em
+`CONTRIBUTING.md` exige revisão de outro integrante e integração por PR; não
+fizemos merge direto na branch principal.
 
-1. **#16/#17:** integrar e validar quantidade de cruzamentos e concluir análise.
-2. **#23/#24:** executar e revisar benchmarks independentes de lista e matriz
-   com subconjuntos equivalentes; a seleção real das estruturas já está
-   disponível, mas os resultados devem ser comparados funcionalmente.
-3. **#35:** executar a validação completa após as integrações, corrigindo erros
-   impeditivos e registrando evidências finais.
-4. **Resultados:** os subconjuntos da #22 e o benchmark de lista da #23 estão
-   versionados; concluir a comparação com a matriz (#24), os estudos de
-   crescimento e os dados finais para gráficos (#25–#27), conforme o escopo.
-5. **Memória e documentação:** conferir a entrega da #28 e a documentação dos
-   algoritmos (#31). Permanecem limitações conhecidas: retorno ambíguo de falhas
-   de alocação e geometria que não cobre todos os contatos/sobreposições.
-6. **Artigo:** disponibilizar e revisar metodologia e análise dos resultados
-   (#32/#33), alinhadas ao que foi efetivamente implementado e medido.
-7. **GitHub:** confirmar issues/PRs atuais, resolver pendências de revisão com
-   outro integrante e confirmar a branch de destino da integração.
-8. **Entrega:** integrar a versão aprovada em `main`, executar novamente em
-   cópia limpa e registrar o commit final reproduzível antes de fechar a #36.
+## Pendências para liberar a entrega
 
-Esta lista identifica entregas a conferir, não afirma que todas as issues
-citadas continuam abertas no GitHub. Nenhum artigo, resultado experimental ou
-aprovação de colega foi substituído por uma declaração de conclusão nesta revisão.
+1. Abrir/revisar PRs com base e destino confirmados pela equipe; dividir o diff
+   amplo por escopo quando necessário e obter aprovação de outro integrante.
+2. Confirmar no GitHub o estado e a responsabilidade das issues relacionadas;
+   fechar apenas as que foram integradas conforme o fluxo do projeto.
+3. Executar e documentar o benchmark de matriz (#24), comparável ao da lista
+   (#23), além dos gráficos/estudos de crescimento previstos em #25–#27.
+4. Disponibilizar o artigo (#32/#33) e revisar se métodos, resultados e
+   conclusões correspondem aos experimentos reproduzíveis.
+5. Conferir a documentação de algoritmos (#31) e as limitações já descritas
+   nos documentos técnicos.
+6. Depois das aprovações, integrar a versão candidata em `main` pelo fluxo de
+   PR e repetir compilação e teste integral a partir do commit integrado.
+
+## Conclusão
+
+A aplicação integrada atende ao fluxo operacional descrito nas issues #34 e
+#35 na branch examinada e passou pela validação local completa. A revisão #36
+continua aberta: não há evidência local suficiente para declarar a Fase I pronta
+para entrega enquanto o PR não for revisado/integrado e os itens de artigo,
+benchmarks e estado remoto não forem resolvidos.

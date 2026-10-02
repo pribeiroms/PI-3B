@@ -84,8 +84,9 @@ O fluxo da #34 aceita opções e salva resultados em CSV:
 ./build/grafo.exe --limite 1000 --estrutura conjunta --saida results/execucoes.csv
 ```
 
-Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso, validação
-e dependências de seleção entre estruturas, estimativa de memória e contagem de cruzamentos.
+Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso,
+validação, seleção entre estruturas, estimativa de memória e contagem de
+cruzamentos.
 
 A metodologia da estimativa de memória e suas limitações estão em
 [docs/MEDICAO_MEMORIA.md](docs/MEDICAO_MEMORIA.md).
@@ -102,7 +103,7 @@ para os resultados observados e os limites desta validação.
 
 ## Revisão e entrega
 
-A revisão parcial da #36, os critérios de liberação e as pendências estão em
+A revisão da #36, os critérios de liberação e as pendências estão em
 [docs/REVISAO_FASE1.md](docs/REVISAO_FASE1.md).
 O [guia de entrega](docs/ENTREGA.md) organiza os documentos e a sequência final
 de validação. Passar nos testes do fluxo disponível não conclui a Fase I.

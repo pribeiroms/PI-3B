@@ -19,8 +19,9 @@
 **Ainda não liberada.** A análise da #17 foi consolidada nesta branch com a
 contagem real da #16. O fluxo da #34 e a integração completa da #35 foram
 validados nesta branch em 02/10/2026 com o dataset real completo em lista e
-matriz. A revisão parcial da #36 está em [REVISAO_FASE1.md](REVISAO_FASE1.md);
-benchmarks e revisão final ainda precisam ser concluídos antes da liberação.
+matriz. A auditoria da #36 está em [REVISAO_FASE1.md](REVISAO_FASE1.md);
+benchmarks, artigo, revisão por outro integrante e integração da versão
+aprovada em `main` ainda precisam ser concluídos.
 
 ## Documentos para conferência
 
@@ -38,12 +39,10 @@ benchmark devem ser disponibilizados pelos responsáveis para revisão.
 
 ## Sequência antes da liberação
 
-1. Concluir componentes e integração pendentes, documentando o estado real.
-2. Executar `mingw32-make all test-integracao` em uma cópia limpa da versão candidata.
-3. Confirmar que a #35 valida toda a aplicação, sem dependências bloqueadas.
-4. Conferir resultados experimentais finais, documentação, artigo e issues.
-5. Obter revisão de outro integrante nos PRs, conforme `CONTRIBUTING.md`.
-6. Integrar somente a versão validada em `main` e repetir a verificação nessa
+1. Executar e revisar os benchmarks pendentes de matriz e os dados de gráficos.
+2. Disponibilizar e revisar o artigo, documentação dos algoritmos e issues.
+3. Obter revisão de outro integrante nos PRs, conforme `CONTRIBUTING.md`.
+4. Integrar somente a versão validada em `main` e repetir a verificação nessa
    versão. Registrar o commit final e os comandos usados para reproduzi-la.
 
 Não usar palavras de fechamento de issue em entregas parciais. Os arquivos
