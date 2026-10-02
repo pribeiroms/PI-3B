@@ -6,8 +6,9 @@ a condição necessária de Euler e cruzamentos no traçado das conexões.
 A aplicação local integra o fluxo principal da #34: carregar o dataset,
 selecionar o limite de vértices e a estrutura (lista ou matriz), construir o
 grafo, executar as análises, exibir e registrar os resultados. A validação
-integrada de toda a Fase I (#35), os benchmarks e a revisão da #36 ainda têm
-pendências e não liberam a entrega final.
+integrada da #35 passou em 02/10/2026 com o dataset real completo nos modos
+lista e matriz. Benchmarks comparativos e a revisão da #36 ainda têm pendências
+antes da entrega final.
 
 ## Estrutura
 
@@ -77,31 +78,32 @@ gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/datas
 O relatório consolidado da issue #17 e suas dependências estão em
 [docs/ANALISE_PLANARIDADE.md](docs/ANALISE_PLANARIDADE.md).
 
-O fluxo parcial da #34 aceita opções e salva resultados em CSV:
+O fluxo da #34 aceita opções e salva resultados em CSV:
 
 ```sh
 ./build/grafo.exe --limite 1000 --estrutura conjunta --saida results/execucoes.csv
 ```
 
-Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso, validação
-e dependências de seleção entre estruturas, estimativa de memória e contagem de cruzamentos.
+Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso,
+validação, seleção entre estruturas, estimativa de memória e contagem de
+cruzamentos.
 
 A metodologia da estimativa de memória e suas limitações estão em
 [docs/MEDICAO_MEMORIA.md](docs/MEDICAO_MEMORIA.md).
 
-Para executar a validação integrada disponível da #35:
+Para repetir a validação integrada completa da #35:
 
 ```sh
 mingw32-make test-integracao
 ```
 
-O teste gera logs, CSV e resumo em `results/integracao-<identificador>/`.
+O teste completo gera logs, CSV e resumo em `results/integracao-<identificador>/`.
 Consulte [docs/TESTE_INTEGRACAO_FASE1.md](docs/TESTE_INTEGRACAO_FASE1.md)
-para os resultados observados e as pendências que impedem concluir a #35.
+para os resultados observados e os limites desta validação.
 
 ## Revisão e entrega
 
-A revisão parcial da #36, os critérios de liberação e as pendências estão em
+A revisão da #36, os critérios de liberação e as pendências estão em
 [docs/REVISAO_FASE1.md](docs/REVISAO_FASE1.md).
 O [guia de entrega](docs/ENTREGA.md) organiza os documentos e a sequência final
 de validação. Passar nos testes do fluxo disponível não conclui a Fase I.

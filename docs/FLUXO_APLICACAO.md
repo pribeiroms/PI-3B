@@ -45,11 +45,12 @@ Zero pode representar uma etapa abaixo da resolução do relógio; `-1` indica
 relógio indisponível. Não incluem apresentação ou escrita do CSV.
 
 O CSV registra a contagem de cruzamentos calculada pela #16 e a estimativa de
-memória das estruturas com o estado `estimada_modelo_alocacoes`. A execução
-registra `parcial` no campo `status_analise` para indicar que a validação
-integrada de toda a Fase I (#35) ainda está pendente. Isso não impede o uso do
-fluxo da #34 descrito aqui. O CSV é um registro básico de execução da #34, não
-substitui a organização dos benchmarks e dados para gráficos das outras issues.
+memória das estruturas com o estado `estimada_modelo_alocacoes`. O campo
+`status_analise=parcial` descreve o resultado analítico limitado pela condição
+necessária de Euler; não significa que o teste de integração da #35 esteja
+incompleto. A validação integral da #35 foi executada na branch revisada, mas
+isso não transforma o CSV de cada execução em benchmark independente. O arquivo
+segue como registro básico e não substitui os benchmarks e dados para gráficos.
 
 Códigos de saída: `0` para execução bem-sucedida ou ajuda, `1` para erro de
 execução/gravação e `2` para argumentos inválidos.
@@ -103,6 +104,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_fluxo_parcial.ps1
 O roteiro disponível verifica o fluxo com recortes do dataset real, preservação de
 execuções no CSV, campos não medidos, limites, ajuda, estruturas exclusivas, falhas
 de leitura/gravação e compatibilidade posicional. Usa arquivos isolados em
-`build/`. A #34 integra as funcionalidades descritas, mas essa verificação do
-roteiro ainda precisa ser executada após as mudanças. Ela não encerra a #35: a
-validação de integração de toda a Fase I permanece em escopo separado.
+`build/`. A validação integral da #35, que também executa este roteiro, está
+registrada em [TESTE_INTEGRACAO_FASE1.md](TESTE_INTEGRACAO_FASE1.md).
