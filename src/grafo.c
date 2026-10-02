@@ -399,3 +399,50 @@ int grafo_segmentos_se_cruzam(Segmento a, Segmento b)
 
     return 0;
 }
+
+int grafo_obter_aresta(const Grafo *grafo, size_t indice_aresta, size_t *origem, size_t *destino)
+{
+    if (grafo == NULL || origem == NULL || destino == NULL ||
+        indice_aresta >= grafo->quantidade_arestas) return 0;
+    *origem = grafo->arestas[indice_aresta].origem;
+    *destino = grafo->arestas[indice_aresta].destino;
+    return 1;
+}
+
+size_t grafo_detectar_cruzamentos(const Grafo *grafo, Cruzamento **cruzamentos)
+{
+    size_t capacidade = 0U;
+    size_t quantidade = 0U;
+    Cruzamento *encontrados = NULL;
+    size_t i, j;
+
+    if (cruzamentos != NULL) *cruzamentos = NULL;
+    if (grafo == NULL) return 0U;
+
+    for (i = 0U; i < grafo->quantidade_arestas; ++i) {
+        Segmento segmento_i;
+        if (!grafo_obter_segmento(grafo, i, &segmento_i)) continue;
+        for (j = i + 1U; j < grafo->quantidade_arestas; ++j) {
+            Segmento segmento_j;
+            if (grafo_arestas_compartilham_vertice(grafo, i, j)) continue;
+            if (!grafo_obter_segmento(grafo, j, &segmento_j)) continue;
+            if (!grafo_segmentos_se_cruzam(segmento_i, segmento_j)) continue;
+            if (quantidade == capacidade) {
+                size_t nova_capacidade = capacidade == 0U ? 8U : capacidade * 2U;
+                Cruzamento *realocado = realloc(encontrados, nova_capacidade * sizeof(*realocado));
+                if (realocado == NULL) {
+                    free(encontrados);
+                    if (cruzamentos != NULL) *cruzamentos = NULL;
+                    return 0U;
+                }
+                encontrados = realocado;
+                capacidade = nova_capacidade;
+            }
+            encontrados[quantidade].aresta_a = i;
+            encontrados[quantidade].aresta_b = j;
+            ++quantidade;
+        }
+    }
+    if (cruzamentos != NULL) *cruzamentos = encontrados; else free(encontrados);
+    return quantidade;
+}
