@@ -19,7 +19,8 @@ int main(int argc, char *argv[])
     ResultadoEuler euler;
     RelatorioCarregamento relatorio;
     clock_t inicio, fim;
-    int cruzamentos;
+    Cruzamento *cruzamentos;
+    size_t quantidade_cruzamentos, i;
 
     if (grafo == NULL) {
         fputs("Erro ao criar o grafo.\n", stderr);
@@ -57,11 +58,22 @@ int main(int argc, char *argv[])
     puts(grafo_mensagem_euler(euler));
 
     inicio = clock();
-    cruzamentos = grafo_possui_cruzamentos(grafo);
+    quantidade_cruzamentos = grafo_detectar_cruzamentos(grafo, &cruzamentos);
     fim = clock();
     printf("Analise de cruzamentos: %.3f ms (Lista de Adjacencia)\n", decorrido_ms(inicio, fim));
 
-    if (cruzamentos) {
+    printf("Cruzamentos encontrados: %zu\n", quantidade_cruzamentos);
+    for (i = 0U; i < quantidade_cruzamentos; ++i) {
+        size_t origem_a, destino_a, origem_b, destino_b;
+        grafo_obter_aresta(grafo, cruzamentos[i].aresta_a, &origem_a, &destino_a);
+        grafo_obter_aresta(grafo, cruzamentos[i].aresta_b, &origem_b, &destino_b);
+        printf("  Aresta %zu (antenas %zu-%zu) x Aresta %zu (antenas %zu-%zu)\n",
+            cruzamentos[i].aresta_a, origem_a, destino_a,
+            cruzamentos[i].aresta_b, origem_b, destino_b);
+    }
+    free(cruzamentos);
+
+    if (quantidade_cruzamentos > 0U) {
         puts("Resultado: existem cruzamentos; a planta exige isolamento ou novas rotas.");
     } else {
         puts("Resultado: nao foram encontrados cruzamentos na planta analisada.");
