@@ -1,10 +1,13 @@
 # Projeto Integrador 3B — Grafos em C
 
-Implementação autoral de estruturas de dados e algoritmos de grafos para o estudo de caso de Telecomunicações (Tema 8), atendendo ao RNF01 e aos requisitos de entrega do projeto.
+Aplicação em C para modelar uma rede de telecomunicações como grafo e analisar
+a condição necessária de Euler e cruzamentos no traçado das conexões.
 
-## Objetivo
-
-Modelar a disposição geográfica de antenas de celular e centrais telefônicas como um grafo (antenas = vértices, conexões = arestas) para responder, na Fase I, se a planta permite a passagem de cabos subterrâneos sem que duas linhas se cruzem — combinando a validação pela Fórmula de Euler com a detecção geométrica de cruzamentos entre conexões.
+A aplicação local integra o fluxo principal da #34: carregar o dataset,
+selecionar o limite de vértices e a estrutura (lista ou matriz), construir o
+grafo, executar as análises, exibir e registrar os resultados. A validação
+integrada de toda a Fase I (#35), os benchmarks e a revisão da #36 ainda têm
+pendências e não liberam a entrega final.
 
 ## Estrutura
 
@@ -19,35 +22,43 @@ docs/      Documentação técnica e de entrega
 
 ## Pré-requisitos
 
-- Compilador C compatível com C11 (GCC, Clang ou MinGW)
-- `make` ou `mingw32-make` (opcional, recomendado)
+- Ambiente validado: Windows com MinGW GCC 6.3.0 e `mingw32-make`.
+- PowerShell para os roteiros de teste do fluxo e de integração.
+- Python 3 para gerar e verificar os subconjuntos do protocolo experimental.
+- Executar os comandos na raiz do projeto; os caminhos padrão são relativos a ela.
 
-## Dataset utilizado
+O código usa C11. O Makefile e os roteiros atuais contêm comandos específicos de
+Windows; execução em outros sistemas ainda não foi validada.
 
-O projeto usa o [OpenCelliD](https://www.opencellid.org/), filtrado para o Brasil, versionado em [`data/opencellid_brasil_filtrado.csv`](data/opencellid_brasil_filtrado.csv) (62.604 registros). Detalhes de como o dataset foi escolhido e preparado estão em [docs/DATASET.md](docs/DATASET.md), e a regra de modelagem (o que vira vértice, o que vira aresta) está em [docs/MODELAGEM_GRAFO.md](docs/MODELAGEM_GRAFO.md).
-
-## Formato dos dados
-
-O CSV segue o formato do OpenCelliD, com cabeçalho `radio,mcc,net,area,cell,lat,lon,range,samples,...`:
-
-| Coluna | Significado |
-|---|---|
-| `radio` | Tecnologia de rádio (GSM, UMTS, LTE etc.) |
-| `mcc` | Código do país da operadora |
-| `net` | Código da operadora (MNC) |
-| `area` | Código da área/localização |
-| `cell` | Identificador da célula/antena |
-| `lat`, `lon` | Coordenadas geográficas da antena |
-| `range` | Alcance estimado da antena, em metros |
-| `samples` | Quantidade de amostras usadas para estimar a posição |
-
-## Compilação
+## Compilação e execução
 
 No terminal, na raiz do projeto:
 
 ```sh
 mingw32-make
+mingw32-make run
 mingw32-make test
+```
+
+Para executar a modelagem geográfica da Fase I com o dataset versionado:
+
+```sh
+mingw32-make run
+```
+
+Consulte [docs/MODELAGEM_GRAFO.md](docs/MODELAGEM_GRAFO.md) para a regra de
+conexão entre antenas e a interpretação do resultado de cruzamentos.
+
+Os subconjuntos reproduzíveis para testes de estresse (N=100, 500, 1.000 e
+5.000), suas contagens e a geração estão descritos em
+[docs/PROTOCOLO_EXPERIMENTAL.md](docs/PROTOCOLO_EXPERIMENTAL.md). O benchmark
+repetido da lista está em [docs/BENCHMARK_LISTA.md](docs/BENCHMARK_LISTA.md),
+com dados brutos em `data/benchmarks/benchmark_lista.csv`.
+
+Para executar novas repetições da lista e salvá-las em `results/`:
+
+```sh
+mingw32-make benchmark-lista
 ```
 
 Os executáveis são gerados em `build/`. Para removê-los:
@@ -59,51 +70,41 @@ mingw32-make clean
 No Windows sem `make`, compile diretamente com GCC:
 
 ```sh
-gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/dataset.c -o grafo.exe -lm
-```
-
-## Execução
-
-```sh
-mingw32-make run
-```
-
-ou, após compilar manualmente com GCC:
-
-```sh
+gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c src/execucao.c -o grafo.exe -lm
 ./grafo.exe
 ```
 
-### Opções disponíveis
+O relatório consolidado da issue #17 e suas dependências estão em
+[docs/ANALISE_PLANARIDADE.md](docs/ANALISE_PLANARIDADE.md).
 
-O programa aceita dois argumentos opcionais, nessa ordem:
-
-```sh
-./build/grafo.exe [caminho-do-csv] [limite-de-registros]
-```
-
-- **caminho-do-csv**: caminho para o arquivo CSV a carregar. Padrão: `data/opencellid_brasil_filtrado.csv`.
-- **limite-de-registros**: quantidade máxima de antenas a carregar. Padrão: `1000`.
-
-Exemplo carregando 500 antenas de outro arquivo:
+O fluxo parcial da #34 aceita opções e salva resultados em CSV:
 
 ```sh
-./build/grafo.exe data/meu_dataset.csv 500
+./build/grafo.exe --limite 1000 --estrutura conjunta --saida results/execucoes.csv
 ```
 
-### Exemplo de execução
+Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso, validação
+e dependências de seleção entre estruturas, estimativa de memória e contagem de cruzamentos.
 
-```text
-Leitura do dataset: 5.000 ms (Lista de Adjacencia)
-Registros invalidos ignorados: 0
-Construcao do grafo: 3.000 ms (Lista de Adjacencia)
-Vertices: 1000
-Arestas sem peso: 637
-Validacao por Euler: 0.000 ms (Lista de Adjacencia)
-A validacao de Euler foi aceita, mas e inconclusiva
-Analise de cruzamentos: 0.000 ms (Lista de Adjacencia)
-Resultado: existem cruzamentos; a planta exige isolamento ou novas rotas.
+A metodologia da estimativa de memória e suas limitações estão em
+[docs/MEDICAO_MEMORIA.md](docs/MEDICAO_MEMORIA.md).
+
+Para executar a validação integrada disponível da #35:
+
+```sh
+mingw32-make test-integracao
 ```
+
+O teste gera logs, CSV e resumo em `results/integracao-<identificador>/`.
+Consulte [docs/TESTE_INTEGRACAO_FASE1.md](docs/TESTE_INTEGRACAO_FASE1.md)
+para os resultados observados e as pendências que impedem concluir a #35.
+
+## Revisão e entrega
+
+A revisão parcial da #36, os critérios de liberação e as pendências estão em
+[docs/REVISAO_FASE1.md](docs/REVISAO_FASE1.md).
+O [guia de entrega](docs/ENTREGA.md) organiza os documentos e a sequência final
+de validação. Passar nos testes do fluxo disponível não conclui a Fase I.
 
 ## Contribuição
 
