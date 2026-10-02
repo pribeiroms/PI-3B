@@ -1,4 +1,5 @@
 #include <math.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,34 @@ static int tamanho_array(size_t quantidade, size_t tamanho, size_t *bytes)
     if (tamanho != 0U && quantidade > SIZE_MAX / tamanho) return 0;
     *bytes = quantidade * tamanho;
     return 1;
+}
+
+static size_t matriz_bytes_por_linha(size_t ordem)
+{
+    return ordem / CHAR_BIT + (ordem % CHAR_BIT != 0U ? 1U : 0U);
+}
+
+static int tamanho_matriz(size_t ordem, size_t *bytes)
+{
+    return tamanho_array(ordem, matriz_bytes_por_linha(ordem), bytes);
+}
+
+static int matriz_tem_aresta(const MatrizAdjacencia *matriz, size_t origem,
+                             size_t destino)
+{
+    size_t indice = origem * matriz_bytes_por_linha(matriz->ordem) +
+        destino / CHAR_BIT;
+    unsigned char mascara = (unsigned char)(1U << (destino % CHAR_BIT));
+    return (matriz->dados[indice] & mascara) != 0U;
+}
+
+static void matriz_definir_aresta(MatrizAdjacencia *matriz, size_t origem,
+                                  size_t destino)
+{
+    size_t indice = origem * matriz_bytes_por_linha(matriz->ordem) +
+        destino / CHAR_BIT;
+    unsigned char mascara = (unsigned char)(1U << (destino % CHAR_BIT));
+    matriz->dados[indice] |= mascara;
 }
 
 static int dobrar_capacidade(size_t atual, size_t inicial, size_t *nova)
@@ -84,15 +113,16 @@ static int expandir_adjacencia(Grafo *grafo)
     }
     if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
         size_t ordem_matriz = grafo->matriz_adjacencia.ordem;
-        size_t celulas;
+        size_t bytes_antigos = matriz_bytes_por_linha(ordem_matriz);
+        size_t bytes_novos = matriz_bytes_por_linha(nova_ordem);
         unsigned char *dados;
-        if (!tamanho_array(nova_ordem, nova_ordem, &celulas)) return 0;
-        dados = calloc(celulas, sizeof(*dados));
+        if (!tamanho_matriz(nova_ordem, &bytes_novos)) return 0;
+        dados = calloc(bytes_novos, sizeof(*dados));
         if (dados == NULL) return 0;
         for (linha = 0U; linha < ordem_matriz; ++linha) {
-            memcpy(&dados[linha * nova_ordem],
-                   &grafo->matriz_adjacencia.dados[linha * ordem_matriz],
-                   ordem_matriz * sizeof(*dados));
+            memcpy(&dados[linha * matriz_bytes_por_linha(nova_ordem)],
+                   &grafo->matriz_adjacencia.dados[linha * bytes_antigos],
+                   bytes_antigos);
         }
         free(grafo->matriz_adjacencia.dados);
         grafo->matriz_adjacencia.dados = dados;
@@ -211,8 +241,8 @@ int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
         grafo->lista_adjacencia.listas[destino] = destino_no;
     }
     if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
-        grafo->matriz_adjacencia.dados[origem * grafo->matriz_adjacencia.ordem + destino] = 1U;
-        grafo->matriz_adjacencia.dados[destino * grafo->matriz_adjacencia.ordem + origem] = 1U;
+        matriz_definir_aresta(&grafo->matriz_adjacencia, origem, destino);
+        matriz_definir_aresta(&grafo->matriz_adjacencia, destino, origem);
     }
     grafo->arestas[grafo->quantidade_arestas].origem = origem;
     grafo->arestas[grafo->quantidade_arestas].destino = destino;
@@ -284,8 +314,9 @@ int grafo_construir_conexoes_ex(Grafo *grafo, size_t *arestas_construidas)
         }
     }
     if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
-        memset(grafo->matriz_adjacencia.dados, 0,
-               grafo->matriz_adjacencia.ordem * grafo->matriz_adjacencia.ordem);
+        size_t bytes_matriz;
+        if (!tamanho_matriz(grafo->matriz_adjacencia.ordem, &bytes_matriz)) return 0;
+        memset(grafo->matriz_adjacencia.dados, 0, bytes_matriz);
     }
     grafo->quantidade_arestas = 0U;
     {
@@ -354,8 +385,7 @@ int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino)
     if (grafo == NULL || origem >= grafo->quantidade_vertices ||
         destino >= grafo->quantidade_vertices) return 0;
     if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA)
-        return grafo->matriz_adjacencia.dados[
-            origem * grafo->matriz_adjacencia.ordem + destino] != 0U;
+        return matriz_tem_aresta(&grafo->matriz_adjacencia, origem, destino);
     for (vizinho = grafo->lista_adjacencia.listas[origem]; vizinho != NULL;
          vizinho = vizinho->proximo)
         if (vizinho->vertice == destino) return 1;
@@ -533,7 +563,7 @@ static int multiplicar_bytes(size_t quantidade, size_t tamanho, size_t *resultad
 int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa)
 {
     size_t vertices_bytes, arestas_bytes, listas_bytes, nos_bytes;
-    size_t celulas_matriz, matriz_bytes, comum, lista_total, matriz_total;
+    size_t matriz_bytes, comum, lista_total, matriz_total;
     if (grafo == NULL || estimativa == NULL) return 0;
     if (!multiplicar_bytes(grafo->capacidade_vertices, sizeof(*grafo->vertices),
             &vertices_bytes) ||
@@ -543,10 +573,7 @@ int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa
             sizeof(*grafo->lista_adjacencia.listas), &listas_bytes) ||
         !multiplicar_bytes(grafo->quantidade_arestas, 2U * sizeof(NoAdjacencia),
             &nos_bytes) ||
-        !multiplicar_bytes(grafo->matriz_adjacencia.ordem,
-            grafo->matriz_adjacencia.ordem, &celulas_matriz) ||
-        !multiplicar_bytes(celulas_matriz, sizeof(*grafo->matriz_adjacencia.dados),
-            &matriz_bytes) ||
+        !tamanho_matriz(grafo->matriz_adjacencia.ordem, &matriz_bytes) ||
         !somar_bytes(sizeof(*grafo), vertices_bytes, &comum) ||
         !somar_bytes(comum, arestas_bytes, &comum) ||
         !somar_bytes(comum, listas_bytes, &lista_total) ||

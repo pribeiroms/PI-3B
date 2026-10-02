@@ -1,31 +1,29 @@
-# Teste de integração da Fase I — #35 (parcial)
+# Teste de integração da Fase I — #35
 
 ## Escopo executado
 
-Foi exercitado o executável da #34 com o dataset real versionado, usando os
-primeiros 1, 100 e 1.000 registros válidos. O recorte de 1.000 foi repetido para
-verificar estabilidade de vértices, arestas, Euler e presença de cruzamentos.
-Esta entrega não representa a execução completa de todos os requisitos da #35.
+O executável foi validado com recortes e com todos os registros do dataset real
+versionado. A execução integral foi repetida nos modos exclusivos de lista e
+matriz; também houve comparação funcional dos dois modos com o conjunto em
+N=1.000.
 
 ```powershell
 mingw32-make test-integracao
 ```
 
-O alvo compila o que estiver desatualizado, executa os testes unitários e o
-roteiro do fluxo parcial da #34 e, então, o teste integrado com dataset real.
-O roteiro retorna `0` quando as verificações disponíveis passam, mas registra
-`parcial_validado`, nunca aprovação completa da Fase I. Qualquer divergência
-interrompe o teste com erro.
+O alvo compila o que estiver desatualizado, executa os testes unitários, o
+roteiro da #34 e o teste da #35 com `-ExigirCompleto`. Esse último executa o
+dataset inteiro sem limite, em lista e em matriz, e retorna `0` somente quando
+as verificações passam. Qualquer divergência interrompe o teste com erro.
 
-Para exigir conclusão integral, executar após a compilação:
+Para executar somente os oito cenários de recorte:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_integracao_fase1.ps1 -ExigirCompleto
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_integracao_fase1.ps1
 ```
 
-No estado atual, esse modo retorna `2` após as verificações disponíveis,
-indicando que a validação completa permanece bloqueada. Não é um erro da
-aplicação nem aprovação das funcionalidades pendentes.
+O modo sem `-ExigirCompleto` registra `parcial_validado`; o alvo
+`test-integracao` usa o modo completo e registra `integracao_validada`.
 
 ## Evidências reproduzíveis
 
@@ -39,9 +37,9 @@ Cada execução cria uma pasta própria `results/integracao-<identificador>/` co
 
 Os logs são capturados pelo teste; não constituem um subsistema próprio de logs
 da aplicação. Resultados gerados permanecem fora do versionamento, conforme a
-regra do repositório. O roteiro e este resumo são versionados.
+regra do repositório. O roteiro e esta documentação são versionados.
 
-## Resultado observado em 01/10/2026
+## Resultado histórico dos recortes em 01/10/2026
 
 Ambiente: Windows, MinGW GCC 6.3.0. Base da aplicação: commit `060c64f`.
 Dataset: `data/opencellid_brasil_filtrado.csv`.
@@ -66,44 +64,58 @@ independente da correção dos algoritmos. O roteiro verifica o hash do dataset;
 mudanças intencionais nos dados ou algoritmos exigem revisar essas referências,
 sem apenas atualizar valores para esconder uma falha.
 
+## Execução integral observada em 02/10/2026
+
+Comando: `mingw32-make test-integracao`. Ambiente: Windows, MinGW GCC 6.3.0,
+processo de 32 bits. Dataset SHA-256:
+`5EB50BD6954466F08ECA483B2D9DA18B50C297E54710532FB7D0646B2987F8DB`.
+O arquivo contém 62.604 registros; 61.933 foram carregados e 671 inválidos
+foram ignorados. As duas representações produziram os mesmos resultados:
+
+| Estrutura | Vértices | Arestas | Euler | Cruzamentos | Memória estimada da estrutura |
+| --- | ---: | ---: | --- | ---: | ---: |
+| Lista | 61.933 | 38.131 | Inconclusivo | 10.211 | 4.542.304 bytes |
+| Matriz compacta | 61.933 | 38.131 | Inconclusivo | 10.211 | 540.540.976 bytes |
+
+Os tempos totais observados foram 55.576 ms para lista e 55.097 ms para matriz.
+São medidas de CPU deste ambiente, não benchmarks comparativos controlados.
+O CSV, stdout, stderr e `resumo.json` dos dez cenários estão em
+`results/integracao-fdb75e06ea7b47fbbd6212ecd53862c3/` nesta cópia local.
+O resumo registra `integracao_validada`, dez casos, dez resultados e nenhuma
+pendência.
+
 ## Cobertura dos requisitos
 
 | Requisito da #35 | Validação atual |
 | --- | --- |
-| Carregamento real | Validado nos recortes e conferido hash antes/depois |
-| Construção do grafo | V/E conferidos entre terminal, CSV e referência |
-| Lista de Adjacência | Modos exclusivos e conjunto exercitados; benchmark específico na #23 |
-| Matriz de Adjacência | Modo exclusivo validado em recorte pequeno; benchmark específico pendente na #24 |
-| Alternância entre estruturas | Modos independentes registrados em execuções separadas; comparabilidade funcional verificada |
-| Euler | Conferido com V/E e mensagem de limitação presente |
-| Cruzamentos | Presença, contagem e conclusão conferidas no terminal e no CSV |
-| Tempo | Quatro etapas registradas e valores válidos |
-| Memória | Estimativas de alocação comum, lista e matriz verificadas no terminal e CSV |
+| Carregamento real | Dataset completo carregado; hash conferido antes/depois; inválidos contabilizados |
+| Construção do grafo | V/E coincidem entre lista e matriz no dataset completo |
+| Lista de Adjacência | Modo exclusivo executado com todos os registros |
+| Matriz de Adjacência | Modo exclusivo executado com todos os registros em representação compacta |
+| Alternância entre estruturas | Lista e matriz executadas em sequência e comparadas com resultados idênticos |
+| Euler | Resultado conferido com V/E; condição atendida e planaridade inconclusiva |
+| Cruzamentos | Contagem 10.211 conferida no terminal e no CSV para ambas as estruturas |
+| Tempo | Cinco etapas registradas com valores finitos não negativos |
+| Memória | Estimativas da lista e da matriz registradas; matriz compacta ocupa cerca de 516 MiB estimados |
 | Logs | Captura de stdout/stderr por cenário e resumo da execução |
-| Geração de resultados | CSV preserva execuções e concorda com terminal |
+| Geração de resultados | Dez linhas CSV preservadas e conferidas contra terminal e resumo |
 
 O roteiro da #34, executado como pré-requisito, cobre argumentos inválidos,
 arquivos ausentes, dataset vazio, erro de gravação, preservação do dataset,
 limite zero com entrada controlada e compatibilidade de argumentos posicionais.
 Nenhum erro impeditivo novo da aplicação foi encontrado nos cenários disponíveis.
 
-## O que falta para concluir
+## Limites e dependências relacionadas
 
-1. Revisar o benchmark de lista registrado em [BENCHMARK_LISTA.md](BENCHMARK_LISTA.md)
-   e executar o benchmark da matriz (#24) nos mesmos subconjuntos.
-2. Conferir a metodologia e os limites da estimativa da #19 em
-   [MEDICAO_MEMORIA.md](MEDICAO_MEMORIA.md).
-3. Atualizar as evidências da #35 com a contagem integrada da #16 e o relatório
-   completo da #17; manter os casos conhecidos de cruzamentos nos testes.
-4. Executar novamente a aplicação completa, corrigir erros impeditivos e
-   registrar novas evidências antes de fechar a #35.
+Esta integração valida o fluxo e a concordância entre estruturas; não prova a
+correção matemática completa dos algoritmos. A regra de Euler retorna
+inconclusivo quando a condição necessária é atendida, como esperado. A suíte
+específica de planaridade da #21 não é substituída por este teste. Falhas de
+alocação também não foram injetadas.
 
-O dataset inteiro contém 62.604 registros de dados; ele não foi processado
-integralmente nesta validação. Os subconjuntos específicos de estresse e suas
-contagens estão em [PROTOCOLO_EXPERIMENTAL.md](PROTOCOLO_EXPERIMENTAL.md) e são
-executados por `mingw32-make test-subconjuntos`. A matriz simultânea e a
-construção por pares tornam a execução integral uma validação de escala
-separada. Falhas de alocação também
-não foram injetadas; permanece a limitação das APIs descrita na documentação
-da #34. A suíte específica de planaridade da #21 não é substituída por estes
-testes de integração.
+O benchmark da matriz (#24) é uma issue separada: medir desempenho não é uma
+dependência funcional para a validação da #35. A metodologia e os limites da
+estimativa de memória estão em [MEDICAO_MEMORIA.md](MEDICAO_MEMORIA.md). Os
+subconjuntos específicos de estresse continuam disponíveis em
+[PROTOCOLO_EXPERIMENTAL.md](PROTOCOLO_EXPERIMENTAL.md) e são executados por
+`mingw32-make test-subconjuntos`.

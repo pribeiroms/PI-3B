@@ -44,7 +44,7 @@ test-fluxo: $(APP)
 	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_fluxo_parcial.ps1
 
 test-integracao: test test-fluxo
-	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_integracao_fase1.ps1
+	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_integracao_fase1.ps1 -ExigirCompleto
 
 test-subconjuntos: $(APP)
 	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_subconjuntos_estresse.ps1

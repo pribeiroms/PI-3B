@@ -17,9 +17,10 @@
 ## Estado da entrega
 
 **Ainda não liberada.** A análise da #17 foi consolidada nesta branch com a
-contagem real da #16. A revisão parcial da #36 está em
-[REVISAO_FASE1.md](REVISAO_FASE1.md); a integração mais ampla da #34 e a
-validação completa da #35 continuam pendentes.
+contagem real da #16. O fluxo da #34 e a integração completa da #35 foram
+validados nesta branch em 02/10/2026 com o dataset real completo em lista e
+matriz. A revisão parcial da #36 está em [REVISAO_FASE1.md](REVISAO_FASE1.md);
+benchmarks e revisão final ainda precisam ser concluídos antes da liberação.
 
 ## Documentos para conferência
 

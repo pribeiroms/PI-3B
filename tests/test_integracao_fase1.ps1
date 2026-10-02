@@ -18,10 +18,10 @@ $resumo = [ordered]@{
     powershell = $PSVersionTable.PSVersion.ToString()
     sistema = [Environment]::OSVersion.ToString()
     casos = $casos
-    pendencias = @(
-        'Benchmark repetido da matriz: issue #24.',
-        'Revisar os resultados completos da #17 apos a integracao na #34.'
-    )
+    pendencias = @()
+}
+if (-not $ExigirCompleto) {
+    $resumo.pendencias += 'Dataset completo nao executado; use -ExigirCompleto para incluir lista e matriz sem limite.'
 }
 
 function Conferir([bool]$Condicao, [string]$Mensagem) {
@@ -98,10 +98,39 @@ try {
         Conferir ((Get-Item (Join-Path $pasta ($nome + '.stderr.log'))).Length -eq 0) 'Erro inesperado na execucao.'
     }
     $linhas = @(Import-Csv -LiteralPath $csv)
+    $referenciaReal = $linhas[2]
     foreach ($campo in @('vertices', 'arestas', 'registros_invalidos', 'euler',
         'possui_cruzamentos', 'quantidade_cruzamentos', 'memoria_comum_bytes',
         'memoria_lista_total_bytes', 'memoria_matriz_total_bytes')) {
         Conferir ($linhas[2].$campo -eq $linhas[3].$campo) "Repeticao produziu resultado diferente: $campo."
+    }
+    foreach ($estrutura in @('lista', 'matriz')) {
+        # Compara as duas representacoes exclusivas com o mesmo recorte do dataset real.
+        # O modo conjunto acima fornece a referencia funcional para esta comparacao.
+        $nome = 'real-1000-' + $estrutura
+        $saidaEstrutura = ExecutarCaso $nome @('--dataset', $dataset, '--limite', '1000',
+            '--estrutura', $estrutura, '--saida', $csv) 0
+        $rEstrutura = (Import-Csv -LiteralPath $csv | Select-Object -Last 1)
+        foreach ($campo in @('vertices', 'arestas', 'registros_invalidos', 'euler',
+            'possui_cruzamentos', 'quantidade_cruzamentos')) {
+            Conferir ($rEstrutura.$campo -eq $referenciaReal.$campo) `
+                "Modo $estrutura diverge do modo conjunto no campo $campo."
+        }
+        Conferir ($rEstrutura.vertices -eq '1000' -and $rEstrutura.arestas -eq '637' -and
+            $rEstrutura.quantidade_cruzamentos -eq '2' -and
+            $rEstrutura.status_cruzamentos -eq 'calculado' -and
+            $saidaEstrutura.Contains("Estrutura: $estrutura de adjacencia") -and
+            $saidaEstrutura.Contains('Quantidade de cruzamentos: 2')) `
+            "Resultados ou apresentacao incompletos no modo $estrutura com dataset real."
+        if ($estrutura -eq 'lista') {
+            Conferir ([long]$rEstrutura.memoria_lista_total_bytes -gt 0 -and
+                $rEstrutura.memoria_matriz_total_bytes -eq '0') `
+                'Modo lista real alocou ou registrou matriz.'
+        } else {
+            Conferir ($rEstrutura.memoria_lista_total_bytes -eq '0' -and
+                [long]$rEstrutura.memoria_matriz_total_bytes -gt 0) `
+                'Modo matriz real alocou ou registrou lista.'
+        }
     }
     foreach ($estrutura in @('lista', 'matriz')) {
         $subset = Join-Path $raizProjeto 'data/subconjuntos/opencellid_n100.csv'
@@ -120,21 +149,86 @@ try {
         }
         Conferir ($saidaEstrutura.Contains("Estrutura: $estrutura de adjacencia")) "Terminal nao identificou $estrutura."
     }
-    Conferir (@(Import-Csv -LiteralPath $csv).Count -eq 6) 'CSV divergiu nas execucoes de representacao.'
+    if ($ExigirCompleto) {
+        $referenciaCompleta = $null
+        foreach ($estrutura in @('lista', 'matriz')) {
+            $nome = 'dataset-completo-' + $estrutura
+            $saidaCompleta = ExecutarCaso $nome @('--dataset', $dataset,
+                '--limite', '0', '--estrutura', $estrutura, '--saida', $csv) 0
+            $rCompleto = (Import-Csv -LiteralPath $csv | Select-Object -Last 1)
+            Conferir ($rCompleto.estrutura -eq $estrutura -and $rCompleto.limite -eq '0' -and
+                $rCompleto.vertices -eq '61933' -and
+                $rCompleto.arestas -eq '38131' -and $rCompleto.registros_invalidos -eq '671' -and
+                $rCompleto.euler -eq 'inconclusivo' -and
+                $rCompleto.possui_cruzamentos -eq '1' -and
+                $rCompleto.quantidade_cruzamentos -eq '10211' -and
+                $rCompleto.status_cruzamentos -eq 'calculado' -and
+                $rCompleto.status_memoria -eq 'estimada_modelo_alocacoes' -and
+                $rCompleto.status_analise -eq 'parcial' -and
+                $rCompleto.memoria_comum_bytes -match '^\d+$' -and
+                $rCompleto.memoria_lista_total_bytes -match '^\d+$' -and
+                $rCompleto.memoria_matriz_total_bytes -match '^\d+$') `
+                "Resultados inesperados para o dataset completo em $estrutura."
+            if ($null -ne $referenciaCompleta) {
+                foreach ($campo in @('vertices', 'arestas', 'registros_invalidos', 'euler',
+                    'possui_cruzamentos', 'quantidade_cruzamentos')) {
+                    Conferir ($rCompleto.$campo -eq $referenciaCompleta.$campo) `
+                        "Lista e matriz divergem no dataset completo: $campo."
+                }
+            } else {
+                $referenciaCompleta = $rCompleto
+            }
+            if ($estrutura -eq 'lista') {
+                Conferir ([long]$rCompleto.memoria_lista_total_bytes -gt 0 -and
+                    $rCompleto.memoria_matriz_total_bytes -eq '0') `
+                    'Lista completa registrou alocacao da matriz.'
+            } else {
+                Conferir ($rCompleto.memoria_lista_total_bytes -eq '0' -and
+                    [long]$rCompleto.memoria_matriz_total_bytes -gt 500000000 -and
+                    [long]$rCompleto.memoria_matriz_total_bytes -lt 600000000) `
+                    'Matriz compacta completa fora do intervalo esperado de memoria.'
+            }
+            Conferir ($saidaCompleta.Contains("Vertices: $($rCompleto.vertices)`r`n") -and
+                $saidaCompleta.Contains("Arestas: $($rCompleto.arestas)`r`n") -and
+                $saidaCompleta.Contains("Estrutura: $estrutura de adjacencia") -and
+                $saidaCompleta.Contains('Quantidade de cruzamentos: 10211') -and
+                $saidaCompleta.Contains("Lista de adjacencia: $($rCompleto.memoria_lista_total_bytes)`r`n") -and
+                $saidaCompleta.Contains("Matriz de adjacencia: $($rCompleto.memoria_matriz_total_bytes)`r`n")) `
+                "Saida do terminal incompleta no dataset completo em $estrutura."
+            foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms',
+                'cruzamentos_cpu_ms', 'total_cpu_ms')) {
+                $tempo = [double]::Parse($rCompleto.$campo, [Globalization.CultureInfo]::InvariantCulture)
+                Conferir ($tempo -ge 0 -and -not [double]::IsInfinity($tempo) -and
+                    -not [double]::IsNaN($tempo)) "Medicao invalida no dataset completo: $campo."
+            }
+            Conferir ((Get-Item (Join-Path $pasta ($nome + '.stderr.log'))).Length -eq 0) `
+                "Erro inesperado no dataset completo em $estrutura."
+        }
+    }
+    $quantidadeExecucoes = if ($ExigirCompleto) { 10 } else { 8 }
+    Conferir (@(Import-Csv -LiteralPath $csv).Count -eq $quantidadeExecucoes) `
+        'CSV divergiu nas execucoes de representacao.'
     Conferir ((Get-FileHash -LiteralPath $dataset -Algorithm SHA256).Hash -eq $resumo.dataset_sha256) 'Dataset foi alterado.'
+    $linhas = @(Import-Csv -LiteralPath $csv)
     $resumo['resultados'] = $linhas
-    $resumo.status = 'parcial_validado'
-    Write-Output 'Integracao disponivel validada com dataset real. A #35 continua parcial.'
+    if ($ExigirCompleto) {
+        $resumo.status = 'integracao_validada'
+        Write-Output 'Integracao completa validada com o dataset real em lista e matriz.'
+    } else {
+        $resumo.status = 'parcial_validado'
+        Write-Output 'Integracao dos recortes reais validada. Use -ExigirCompleto para validar o dataset inteiro.'
+    }
 } catch {
-    $resumo.status = 'falhou'
     $resumo['erro'] = $_.Exception.Message
+    if ($_.Exception.Message -match 'Application Control policy has blocked') {
+        $resumo.status = 'bloqueado_ambiente'
+        $resumo.pendencias += 'Application Control bloqueou o executavel antes de qualquer cenário.'
+    } else {
+        $resumo.status = 'falhou'
+    }
     throw
 } finally {
     $resumo | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 (Join-Path $pasta 'resumo.json')
     Write-Output "Evidencias: $pasta"
     Pop-Location
-}
-if ($ExigirCompleto) {
-    Write-Output 'Validacao completa bloqueada pelas pendencias registradas. Issue #35 nao concluida.'
-    exit 2
 }
