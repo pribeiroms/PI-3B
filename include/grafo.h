@@ -47,6 +47,11 @@ typedef struct {
     CoordenadaGeografica fim;
 } Segmento;
 
+typedef struct {
+    size_t aresta_a;
+    size_t aresta_b;
+} Cruzamento;
+
 /* Cria um grafo vazio. Retorna NULL caso a alocação falhe. */
 Grafo *grafo_criar(void);
 
@@ -102,5 +107,12 @@ int grafo_arestas_compartilham_vertice(const Grafo *grafo, size_t aresta_a, size
 
 /* Retorna 1 se os dois segmentos se cruzam (caso geral ou colinear), 0 caso contrario. */
 int grafo_segmentos_se_cruzam(Segmento a, Segmento b);
+
+/* Obtem os indices das antenas (origem/destino) de uma aresta. Retorna 1 em sucesso. */
+int grafo_obter_aresta(const Grafo *grafo, size_t indice_aresta, size_t *origem, size_t *destino);
+
+/* Detecta todos os cruzamentos entre arestas sem vertice em comum. Aloca *cruzamentos
+ * (o chamador deve liberar com free) e retorna a quantidade encontrada. */
+size_t grafo_detectar_cruzamentos(const Grafo *grafo, Cruzamento **cruzamentos);
 
 #endif
