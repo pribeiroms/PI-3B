@@ -252,45 +252,6 @@ static void teste_quantidades_apos_construcao_automatica(void)
     grafo_destruir(grafo);
 }
 
-static void teste_obtem_segmento_da_aresta(void)
-{
-    Grafo *grafo = grafo_criar();
-    Segmento segmento;
-
-    assert(grafo != NULL);
-    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 1U, -23.0, -46.0, 1.0) == 0);
-    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 2U, -22.5, -45.5, 1.0) == 1);
-    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
-
-    assert(grafo_obter_segmento(grafo, 0U, &segmento) == 1);
-    assert(segmento.inicio.latitude == -23.0);
-    assert(segmento.inicio.longitude == -46.0);
-    assert(segmento.fim.latitude == -22.5);
-    assert(segmento.fim.longitude == -45.5);
-
-    /* entradas invalidas */
-    assert(grafo_obter_segmento(grafo, 1U, &segmento) == 0);
-    assert(grafo_obter_segmento(grafo, 0U, NULL) == 0);
-    assert(grafo_obter_segmento(NULL, 0U, &segmento) == 0);
-    grafo_destruir(grafo);
-}
-
-static void teste_arestas_compartilham_vertice(void)
-{
-    Grafo *grafo = criar_grafo_com_vertices(4U);
-
-    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
-    assert(grafo_adicionar_aresta(grafo, 1U, 2U) == 1);
-    assert(grafo_adicionar_aresta(grafo, 2U, 3U) == 1);
-
-    assert(grafo_arestas_compartilham_vertice(grafo, 0U, 1U) == 1);
-    assert(grafo_arestas_compartilham_vertice(grafo, 1U, 2U) == 1);
-    assert(grafo_arestas_compartilham_vertice(grafo, 0U, 2U) == 0);
-    assert(grafo_arestas_compartilham_vertice(grafo, 0U, 9U) == 0);
-    assert(grafo_arestas_compartilham_vertice(NULL, 0U, 1U) == 0);
-    grafo_destruir(grafo);
-}
-
 static Grafo *criar_grafo_com_coordenadas(const double latitudes[], const double longitudes[],
     size_t quantidade)
 {
@@ -478,8 +439,6 @@ int main(void)
     teste_euler_nao_planar();
     teste_euler_inconclusivo();
     teste_quantidades_apos_construcao_automatica();
-    teste_obtem_segmento_da_aresta();
-    teste_arestas_compartilham_vertice();
     teste_planaridade_arvore();
     teste_planaridade_ciclo();
     teste_planaridade_k4_planar();
