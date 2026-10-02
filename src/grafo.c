@@ -169,8 +169,20 @@ int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
                            unsigned int area, unsigned int cell, double latitude,
                            double longitude, double alcance_metros)
 {
+	if (grafo_adicionar_antena_ex(grafo, mcc, net, area, cell, latitude,
+		longitude, alcance_metros) != 1) return -1;
+	return (int)(grafo->quantidade_vertices - 1U);
+}
+
+int grafo_adicionar_antena_ex(Grafo *grafo, unsigned int mcc, unsigned int net,
+						      unsigned int area, unsigned int cell, double latitude,
+						      double longitude, double alcance_metros)
+{
     Vertice vertice = {0U, mcc, net, area, cell, {latitude, longitude}, alcance_metros};
-    return grafo_adicionar_vertice(grafo, vertice);
+    if (grafo == NULL || !isfinite(latitude) || !isfinite(longitude) ||
+        !isfinite(alcance_metros) || latitude < -90.0 || latitude > 90.0 ||
+        longitude < -180.0 || longitude > 180.0 || alcance_metros < 0.0) return 0;
+    return grafo_adicionar_vertice(grafo, vertice) < 0 ? -1 : 1;
 }
 
 int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
@@ -256,13 +268,15 @@ static double distancia_metros(const Vertice *a, const Vertice *b)
     return raio_terra * 2.0 * atan2(sqrt(x), sqrt(1.0 - x));
 }
 
-size_t grafo_construir_conexoes(Grafo *grafo)
+int grafo_construir_conexoes_ex(Grafo *grafo, size_t *arestas_construidas)
 {
     size_t *proxima;
     size_t i, j;
     double *menor;
 
-    if (grafo == NULL || grafo->quantidade_vertices < 2U) return 0U;
+    if (arestas_construidas != NULL) *arestas_construidas = 0U;
+    if (grafo == NULL || arestas_construidas == NULL) return 0;
+    if (grafo->quantidade_vertices < 2U) return 1;
     if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
         for (i = 0U; i < grafo->lista_adjacencia.quantidade_vertices; ++i) {
             liberar_lista(grafo->lista_adjacencia.listas[i]);
@@ -278,14 +292,14 @@ size_t grafo_construir_conexoes(Grafo *grafo)
         size_t bytes_proxima, bytes_menor;
         if (!tamanho_array(grafo->quantidade_vertices, sizeof(*proxima), &bytes_proxima) ||
             !tamanho_array(grafo->quantidade_vertices, sizeof(*menor), &bytes_menor))
-            return 0U;
+            return 0;
         proxima = malloc(bytes_proxima);
         menor = malloc(bytes_menor);
     }
     if (proxima == NULL || menor == NULL) {
         free(proxima);
         free(menor);
-        return 0U;
+        return 0;
     }
     for (i = 0U; i < grafo->quantidade_vertices; ++i) {
         proxima[i] = grafo->quantidade_vertices;
@@ -306,11 +320,22 @@ size_t grafo_construir_conexoes(Grafo *grafo)
     for (i = 0U; i < grafo->quantidade_vertices; ++i) {
         j = proxima[i];
         if (j < grafo->quantidade_vertices && (proxima[j] != i || i < j))
-            grafo_adicionar_aresta(grafo, i, j);
+            if (!grafo_adicionar_aresta(grafo, i, j)) {
+                free(proxima);
+                free(menor);
+                return 0;
+            }
     }
     free(proxima);
     free(menor);
-    return grafo->quantidade_arestas;
+    *arestas_construidas = grafo->quantidade_arestas;
+    return 1;
+}
+
+size_t grafo_construir_conexoes(Grafo *grafo)
+{
+    size_t arestas = 0U;
+    return grafo_construir_conexoes_ex(grafo, &arestas) ? arestas : 0U;
 }
 
 size_t grafo_quantidade_vertices(const Grafo *grafo)

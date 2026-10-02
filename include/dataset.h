@@ -17,7 +17,8 @@ typedef struct {
  * limite igual a 0 carrega todos os registros validos. Registros malformados
  * ou com coordenadas/valores fora do dominio sao ignorados e contabilizados
  * em registros_invalidos. Retorna 1 em sucesso, inclusive quando houver
- * registros invalidos; retorna 0 para falhas de abertura, leitura ou cabecalho.
+ * registros invalidos; retorna 0 para falhas de abertura, leitura, cabecalho
+ * ou alocacao de memoria.
  */
 int dataset_carregar_opencellid(Grafo *grafo, const char *caminho, size_t limite,
                                 RelatorioCarregamento *relatorio, char *erro,

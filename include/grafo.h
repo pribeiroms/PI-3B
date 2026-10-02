@@ -81,6 +81,11 @@ int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
 						   unsigned int area, unsigned int cell, double latitude,
 						   double longitude, double alcance_metros);
 
+/* Retorna 1 ao inserir, 0 para dados invalidos e -1 em falha de memoria. */
+int grafo_adicionar_antena_ex(Grafo *grafo, unsigned int mcc, unsigned int net,
+						      unsigned int area, unsigned int cell, double latitude,
+						      double longitude, double alcance_metros);
+
 /* Adiciona uma aresta nao direcionada e sem peso. Retorna 1 em caso de sucesso. */
 int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino);
 
@@ -90,6 +95,9 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
 
 /* Cria as arestas da Fase I conforme os criterios de proximidade e alcance. */
 size_t grafo_construir_conexoes(Grafo *grafo);
+
+/* Retorna 1 em sucesso e 0 em falha; arestas_construidas recebe a contagem. */
+int grafo_construir_conexoes_ex(Grafo *grafo, size_t *arestas_construidas);
 
 size_t grafo_quantidade_vertices(const Grafo *grafo);
 size_t grafo_quantidade_arestas(const Grafo *grafo);

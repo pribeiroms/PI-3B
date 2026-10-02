@@ -3,9 +3,11 @@
 Aplicação em C para modelar uma rede de telecomunicações como grafo e analisar
 a condição necessária de Euler e cruzamentos no traçado das conexões.
 
-A Fase I está **parcialmente integrada**: a aplicação oferece modos exclusivos
-de lista e matriz e um modo conjunto. Os benchmarks e a validação completa da
-Fase I ainda têm pendências. A revisão da #36 não libera a entrega final.
+A aplicação local integra o fluxo principal da #34: carregar o dataset,
+selecionar o limite de vértices e a estrutura (lista ou matriz), construir o
+grafo, executar as análises, exibir e registrar os resultados. A validação
+integrada de toda a Fase I (#35), os benchmarks e a revisão da #36 ainda têm
+pendências e não liberam a entrega final.
 
 ## Estrutura
 

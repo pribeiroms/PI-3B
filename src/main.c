@@ -57,11 +57,14 @@ int main(int argc, char *argv[])
         return 1;
     }
     inicio = clock();
-    (void)grafo_construir_conexoes(grafo);
+    if (!grafo_construir_conexoes_ex(grafo, &resultado.arestas)) {
+        fputs("Erro ao construir conexoes do grafo (memoria insuficiente).\n", stderr);
+        grafo_destruir(grafo);
+        return 1;
+    }
     fim = clock();
     resultado.construcao_ms = decorrido_ms(inicio, fim);
     resultado.vertices = grafo_quantidade_vertices(grafo);
-    resultado.arestas = grafo_quantidade_arestas(grafo);
 
     inicio = clock();
     resultado.euler = grafo_verificar_euler(grafo);

@@ -1,6 +1,7 @@
-# Fluxo da aplicação — #34 (parcial)
+# Fluxo da aplicação — #34
 
-O executável integra os componentes atualmente disponíveis, reutilizando
+O executável implementa o fluxo principal da #34 e integra os componentes
+atualmente disponíveis, reutilizando
 dataset, construção do grafo, Euler, contagem de cruzamentos,
 medições por etapa e relatório da #17. Não reimplementa os algoritmos dos colegas.
 
@@ -45,8 +46,9 @@ relógio indisponível. Não incluem apresentação ou escrita do CSV.
 
 O CSV registra a contagem de cruzamentos calculada pela #16 e a estimativa de
 memória das estruturas com o estado `estimada_modelo_alocacoes`. A execução
-integrada segue marcada como `parcial` porque a validação completa da #35 ainda
-está pendente. O CSV é um registro básico de execução da #34, não
+registra `parcial` no campo `status_analise` para indicar que a validação
+integrada de toda a Fase I (#35) ainda está pendente. Isso não impede o uso do
+fluxo da #34 descrito aqui. O CSV é um registro básico de execução da #34, não
 substitui a organização dos benchmarks e dados para gráficos das outras issues.
 
 Códigos de saída: `0` para execução bem-sucedida ou ajuda, `1` para erro de
@@ -65,7 +67,7 @@ execução/gravação e `2` para argumentos inválidos.
 | Apresentar resultados | Relatório completo da #17 integrado |
 | Tempo | Medições disponíveis da #18 integradas |
 | Memória | Estimativas comparáveis da lista e da matriz integradas (#19) |
-| Salvar resultados | CSV básico implementado, com campos pendentes explícitos |
+| Salvar resultados | CSV implementado: uma linha por execução; `status_analise` acompanha a validação mais ampla da Fase I |
 
 O padrão continua sendo `--estrutura conjunta` para compatibilidade. Para
 medições independentes, `--estrutura lista` aloca e consulta a lista encadeada;
@@ -85,11 +87,11 @@ zero. No modo conjunto, ambos os totais são apresentados.
 Para cruzamentos, o relatório e o CSV contam pares de arestas que se cruzam na mesma
 execução analisada por Euler.
 
-A API de construção existente retorna zero tanto para ausência de arestas como
-para algumas falhas de alocação; a leitura também não distingue todos os erros
-de alocação dos registros inválidos. Não é possível garantir a detecção desses
-erros pela integração atual. Alinhar um retorno de erro explícito nas APIs antes
-de considerar o fluxo validado para falhas de recursos.
+O fluxo principal usa APIs com retorno explícito para distinguir uma construção
+válida sem arestas de falhas de alocação. Registros malformados continuam sendo
+ignorados e contabilizados; uma falha de memória interrompe a execução com erro
+e não grava uma linha incompleta no CSV. As funções legadas de construção seguem
+disponíveis para compatibilidade com os módulos da Fase I.
 
 ## Validação desta entrega
 
@@ -98,8 +100,9 @@ mingw32-make all test
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_fluxo_parcial.ps1
 ```
 
-O roteiro verifica o fluxo com recortes do dataset real, preservação de
+O roteiro disponível verifica o fluxo com recortes do dataset real, preservação de
 execuções no CSV, campos não medidos, limites, ajuda, estruturas exclusivas, falhas
 de leitura/gravação e compatibilidade posicional. Usa arquivos isolados em
-`build/`. Não encerra a #35: ainda falta a análise completa para o teste de
-integração de toda a Fase I.
+`build/`. A #34 integra as funcionalidades descritas, mas essa verificação do
+roteiro ainda precisa ser executada após as mudanças. Ela não encerra a #35: a
+validação de integração de toda a Fase I permanece em escopo separado.
