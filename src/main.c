@@ -63,6 +63,7 @@ int main(int argc, char *argv[])
     resultado.possui_cruzamentos = quantidade_cruzamentos > 0U;
     fim = clock();
     resultado.cruzamentos_ms = decorrido_ms(inicio, fim);
+    resultado.memoria_disponivel = grafo_estimar_memoria(grafo, &resultado.memoria);
     grafo_destruir(grafo);
 
     printf("Registros invalidos ignorados: %zu\n"
@@ -70,7 +71,15 @@ int main(int argc, char *argv[])
            "Leitura: %.3f\nConstrucao: %.3f\nEuler: %.3f\nCruzamentos: %.3f\n",
            resultado.carregamento.registros_invalidos, resultado.leitura_ms,
            resultado.construcao_ms, resultado.euler_ms, resultado.cruzamentos_ms);
-    puts("Consumo de memoria: indisponivel (pendente da #19).");
+    if (resultado.memoria_disponivel) {
+        printf("Memoria estimada em bytes (modelo das alocacoes do grafo):\n"
+               "Comum: %zu\nLista de adjacencia: %zu\nMatriz de adjacencia: %zu\n",
+               resultado.memoria.memoria_comum_bytes,
+               resultado.memoria.memoria_lista_total_bytes,
+               resultado.memoria.memoria_matriz_total_bytes);
+    } else {
+        puts("Estimativa de memoria: indisponivel (overflow ou entrada invalida).");
+    }
     analise_planaridade_exibir(stdout, resultado.vertices, resultado.arestas,
         resultado.euler, resultado.possui_cruzamentos,
         &resultado.quantidade_cruzamentos);

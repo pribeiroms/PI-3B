@@ -59,7 +59,7 @@ foram exportados e validados como números finitos não negativos. Zero é
 permitido pela resolução do relógio; os tempos não são fixados como valores
 esperados. Os resultados desta execução documentada são da base anterior à
 integração da contagem. O roteiro agora verifica a quantidade no terminal e no
-CSV; memória continua sem valor medido.
+CSV; a medição de memória foi integrada depois dessa execução documentada.
 
 Os valores acima são referências de regressão da versão atual, não uma prova
 independente da correção dos algoritmos. O roteiro verifica o hash do dataset;
@@ -78,7 +78,7 @@ sem apenas atualizar valores para esconder uma falha.
 | Euler | Conferido com V/E e mensagem de limitação presente |
 | Cruzamentos | Presença, contagem e conclusão conferidas no terminal e no CSV |
 | Tempo | Quatro etapas registradas e valores válidos |
-| Memória | Bloqueada; campo vazio com estado pendente |
+| Memória | Estimativas de alocação comum, lista e matriz verificadas no terminal e CSV |
 | Logs | Captura de stdout/stderr por cenário e resumo da execução |
 | Geração de resultados | CSV preserva execuções e concorda com terminal |
 
@@ -92,8 +92,9 @@ Nenhum erro impeditivo novo da aplicação foi encontrado nos cenários disponí
 1. Concluir na #34 a seleção efetiva de lista e matriz, alinhada às APIs das
    #7/#8/#11; executar os mesmos recortes em cada modo e comparar os resultados
    funcionais, sem exigir tempos ou memória iguais.
-2. Integrar a medição da #19; conferir unidade, escopo e coerência entre
-   terminal/CSV e por estrutura.
+2. Conferir a metodologia e os limites da estimativa da #19 em
+   [MEDICAO_MEMORIA.md](MEDICAO_MEMORIA.md); a seleção exclusiva por estrutura
+   permanece pendente da #34.
 3. Atualizar as evidências da #35 com a contagem integrada da #16 e o relatório
    completo da #17; manter os casos conhecidos de cruzamentos nos testes.
 4. Executar novamente a aplicação completa, corrigir erros impeditivos e

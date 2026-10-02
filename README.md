@@ -4,8 +4,8 @@ Aplicação em C para modelar uma rede de telecomunicações como grafo e analis
 a condição necessária de Euler e cruzamentos no traçado das conexões.
 
 A Fase I está **parcialmente integrada**: o modo atual mantém lista e matriz
-simultaneamente. Seleção exclusiva da estrutura, medição de memória e contagem
-de cruzamentos ainda estão pendentes. A revisão da #36 não libera a entrega final.
+simultaneamente. A seleção exclusiva da estrutura ainda está pendente. A
+revisão da #36 não libera a entrega final.
 
 ## Estrutura
 
@@ -69,7 +69,10 @@ O fluxo parcial da #34 aceita opções e salva resultados em CSV:
 ```
 
 Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso, validação
-e dependências de seleção entre estruturas, memória e contagem de cruzamentos.
+e dependências de seleção entre estruturas, estimativa de memória e contagem de cruzamentos.
+
+A metodologia da estimativa de memória e suas limitações estão em
+[docs/MEDICAO_MEMORIA.md](docs/MEDICAO_MEMORIA.md).
 
 Para executar a validação integrada disponível da #35:
 

@@ -20,7 +20,9 @@ try {
     $csv = Join-Path $pastaTeste 'resultados.csv'
     $real = Join-Path $raizProjeto 'data/opencellid_brasil_filtrado.csv'
     $saida = Executar @('--dataset', $real, '--limite', '100', '--estrutura', 'conjunta', '--saida', $csv)
-    if ($saida -notmatch 'Vertices: 100' -or $saida -notmatch 'pendente da #19') {
+    if ($saida -notmatch 'Vertices: 100' -or
+        $saida -notmatch 'Lista de adjacencia: \d+' -or
+        $saida -notmatch 'Matriz de adjacencia: \d+') {
         throw 'Saida nao apresenta os resultados e as pendencias esperadas.'
     }
     $null = Executar @('--dataset', $real, '--limite', '10', '--saida', $csv)
@@ -29,12 +31,16 @@ try {
         throw 'CSV nao preservou as duas execucoes ou seus limites.'
     }
     foreach ($linha in $linhas) {
-        if ($linha.estrutura -ne 'conjunta' -or $linha.memoria_bytes -ne '' -or
+        if ($linha.estrutura -ne 'conjunta' -or
+            $linha.memoria_comum_bytes -notmatch '^\d+$' -or
+            $linha.memoria_lista_total_bytes -notmatch '^\d+$' -or
+            $linha.memoria_matriz_total_bytes -notmatch '^\d+$' -or
             $linha.quantidade_cruzamentos -ne '0' -or $linha.status_analise -ne 'parcial') {
             throw 'CSV divergiu dos resultados de cruzamentos ou memoria.'
         }
         if ($linha.dataset -ne $real -or $linha.euler -ne 'inconclusivo' -or
-            $linha.status_memoria -ne 'pendente_19' -or $linha.status_cruzamentos -ne 'calculado') {
+            $linha.status_memoria -ne 'estimada_modelo_alocacoes' -or
+            $linha.status_cruzamentos -ne 'calculado') {
             throw 'Metadados incorretos no CSV.'
         }
         foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms', 'cruzamentos_cpu_ms')) {

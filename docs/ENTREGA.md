@@ -26,6 +26,7 @@ validação completa da #35 continuam pendentes.
 - [Dataset e rastreabilidade](DATASET.md).
 - [Modelagem](MODELAGEM_GRAFO.md).
 - [Análise de planaridade](ANALISE_PLANARIDADE.md).
+- [Estimativa de memória](MEDICAO_MEMORIA.md).
 - [Fluxo e formato dos resultados](FLUXO_APLICACAO.md).
 - [Validação integrada e evidências](TESTE_INTEGRACAO_FASE1.md).
 

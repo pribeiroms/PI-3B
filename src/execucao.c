@@ -106,7 +106,8 @@ int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
 {
     const char *cabecalho = "data_utc,dataset,limite,estrutura,vertices,arestas,"
         "registros_invalidos,euler,possui_cruzamentos,quantidade_cruzamentos,"
-        "status_cruzamentos,memoria_bytes,status_memoria,leitura_cpu_ms,"
+        "status_cruzamentos,memoria_comum_bytes,memoria_lista_total_bytes,"
+        "memoria_matriz_total_bytes,status_memoria,leitura_cpu_ms,"
         "construcao_cpu_ms,euler_cpu_ms,cruzamentos_cpu_ms,status_analise\n";
     char linha[1024];
     char data[32] = "indisponivel";
@@ -130,10 +131,18 @@ int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
     escrever_campo(arquivo, data);
     fputc(',', arquivo);
     escrever_campo(arquivo, opcoes->dataset);
-    fprintf(arquivo, ",%zu,conjunta,%zu,%zu,%zu,%s,%d,%zu,calculado,,pendente_19,"
-        "%.3f,%.3f,%.3f,%.3f,parcial\n", opcoes->limite, r->vertices, r->arestas,
+    fprintf(arquivo, ",%zu,conjunta,%zu,%zu,%zu,%s,%d,%zu,calculado,",
+        opcoes->limite, r->vertices, r->arestas,
         r->carregamento.registros_invalidos, nome_euler(r->euler),
-        r->possui_cruzamentos, r->quantidade_cruzamentos, r->leitura_ms,
+        r->possui_cruzamentos, r->quantidade_cruzamentos);
+    if (r->memoria_disponivel) {
+        fprintf(arquivo, "%zu,%zu,%zu,estimada_modelo_alocacoes,",
+            r->memoria.memoria_comum_bytes, r->memoria.memoria_lista_total_bytes,
+            r->memoria.memoria_matriz_total_bytes);
+    } else {
+        fputs(",,,indisponivel,", arquivo);
+    }
+    fprintf(arquivo, "%.3f,%.3f,%.3f,%.3f,parcial\n", r->leitura_ms,
         r->construcao_ms, r->euler_ms,
         r->cruzamentos_ms);
     ok = !ferror(arquivo);

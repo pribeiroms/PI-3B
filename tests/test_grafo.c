@@ -43,6 +43,23 @@ static void teste_detecta_cruzamento(void)
     grafo_destruir(grafo);
 }
 
+static void teste_estimativa_memoria(void)
+{
+    Grafo *grafo = grafo_criar();
+    EstimativaMemoriaGrafo estimativa;
+    assert(grafo != NULL);
+    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
+    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 2U, 0.0, 1.0, 1.0) == 1);
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U));
+    assert(grafo_estimar_memoria(grafo, &estimativa));
+    assert(estimativa.memoria_comum_bytes > 0U);
+    assert(estimativa.memoria_lista_total_bytes > estimativa.memoria_comum_bytes);
+    assert(estimativa.memoria_matriz_total_bytes > estimativa.memoria_comum_bytes);
+    assert(grafo_estimar_memoria(NULL, &estimativa) == 0);
+    assert(grafo_estimar_memoria(grafo, NULL) == 0);
+    grafo_destruir(grafo);
+}
+
 static void teste_representacoes_do_grafo(void)
 {
     Grafo *grafo = grafo_criar();
@@ -210,6 +227,7 @@ static void teste_quantidades_apos_construcao_automatica(void)
 
 int main(void)
 {
+    teste_estimativa_memoria();
     teste_cria_e_destroi_grafo();
     teste_cria_conexao_elegivel();
     teste_detecta_cruzamento();

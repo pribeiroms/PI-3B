@@ -61,8 +61,9 @@ logs versionados. As saídas temporárias permanecem ignoradas pelo Git.
 ## Pendências para concluir a #36
 
 1. **#16/#17:** integrar e validar quantidade de cruzamentos e concluir análise.
-2. **#19 e #34:** medir memória e selecionar efetivamente lista ou matriz com
-   as APIs das estruturas (#7/#8/#11); concluir o fluxo principal.
+2. **#34:** selecionar efetivamente lista ou matriz com as APIs das estruturas
+   (#7/#8/#11); a estimativa de memória da #19 está integrada, mas não substitui
+   execuções isoladas para comparar consumo observado por modo.
 3. **#35:** executar a validação completa após as integrações, corrigindo erros
    impeditivos e registrando evidências finais.
 4. **Resultados:** disponibilizar benchmarks, comparação entre estruturas,

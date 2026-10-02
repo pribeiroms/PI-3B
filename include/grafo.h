@@ -52,6 +52,12 @@ typedef struct {
 	size_t aresta_b;
 } Cruzamento;
 
+typedef struct {
+	size_t memoria_comum_bytes;
+	size_t memoria_lista_total_bytes;
+	size_t memoria_matriz_total_bytes;
+} EstimativaMemoriaGrafo;
+
 /* Cria um grafo vazio. Retorna NULL caso a alocação falhe. */
 Grafo *grafo_criar(void);
 
@@ -102,5 +108,10 @@ const char *grafo_mensagem_euler(ResultadoEuler resultado);
 
 /* Conta cruzamentos entre arestas sem vertice em comum. */
 size_t grafo_detectar_cruzamentos(const Grafo *grafo, Cruzamento **cruzamentos);
+
+/* Estima bytes solicitados ao alocador pelo grafo para cada representacao.
+ * Inclui armazenamento comum de vertices/arestas; exclui overhead do alocador
+ * e buffers temporarios dos algoritmos. */
+int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa);
 
 #endif

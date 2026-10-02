@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,6 +13,7 @@ struct Grafo {
     Aresta *arestas;
     size_t quantidade_arestas;
     size_t capacidade_arestas;
+    size_t capacidade_listas;
     ListaAdjacencia lista_adjacencia;
     MatrizAdjacencia matriz_adjacencia;
 };
@@ -48,9 +50,10 @@ static int expandir_adjacencia(Grafo *grafo)
     size_t linha;
 
     if (listas == NULL) return 0;
+    grafo->lista_adjacencia.listas = listas;
+    grafo->capacidade_listas = nova_ordem;
     dados = calloc(nova_ordem * nova_ordem, sizeof(*dados));
     if (dados == NULL) {
-        grafo->lista_adjacencia.listas = listas;
         return 0;
     }
     for (linha = 0U; linha < antiga_ordem; ++linha) {
@@ -408,4 +411,46 @@ size_t grafo_detectar_cruzamentos(const Grafo *grafo, Cruzamento **cruzamentos)
     if (cruzamentos != NULL) *cruzamentos = encontrados;
     else free(encontrados);
     return quantidade;
+}
+
+static int somar_bytes(size_t a, size_t b, size_t *resultado)
+{
+    if (a > SIZE_MAX - b) return 0;
+    *resultado = a + b;
+    return 1;
+}
+
+static int multiplicar_bytes(size_t quantidade, size_t tamanho, size_t *resultado)
+{
+    if (tamanho != 0U && quantidade > SIZE_MAX / tamanho) return 0;
+    *resultado = quantidade * tamanho;
+    return 1;
+}
+
+int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa)
+{
+    size_t vertices_bytes, arestas_bytes, listas_bytes, nos_bytes;
+    size_t celulas_matriz, matriz_bytes, comum, lista_total, matriz_total;
+    if (grafo == NULL || estimativa == NULL) return 0;
+    if (!multiplicar_bytes(grafo->capacidade_vertices, sizeof(*grafo->vertices),
+            &vertices_bytes) ||
+        !multiplicar_bytes(grafo->capacidade_arestas, sizeof(*grafo->arestas),
+            &arestas_bytes) ||
+        !multiplicar_bytes(grafo->capacidade_listas,
+            sizeof(*grafo->lista_adjacencia.listas), &listas_bytes) ||
+        !multiplicar_bytes(grafo->quantidade_arestas, 2U * sizeof(NoAdjacencia),
+            &nos_bytes) ||
+        !multiplicar_bytes(grafo->matriz_adjacencia.ordem,
+            grafo->matriz_adjacencia.ordem, &celulas_matriz) ||
+        !multiplicar_bytes(celulas_matriz, sizeof(*grafo->matriz_adjacencia.dados),
+            &matriz_bytes) ||
+        !somar_bytes(sizeof(*grafo), vertices_bytes, &comum) ||
+        !somar_bytes(comum, arestas_bytes, &comum) ||
+        !somar_bytes(comum, listas_bytes, &lista_total) ||
+        !somar_bytes(lista_total, nos_bytes, &lista_total) ||
+        !somar_bytes(comum, matriz_bytes, &matriz_total)) return 0;
+    estimativa->memoria_comum_bytes = comum;
+    estimativa->memoria_lista_total_bytes = lista_total;
+    estimativa->memoria_matriz_total_bytes = matriz_total;
+    return 1;
 }

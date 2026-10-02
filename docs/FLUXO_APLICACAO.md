@@ -43,9 +43,10 @@ não devem ser tratadas como benchmarks independentes de lista versus matriz.
 Zero pode representar uma etapa abaixo da resolução do relógio; `-1` indica
 relógio indisponível. Não incluem apresentação ou escrita do CSV.
 
-O CSV registra a contagem de cruzamentos calculada pela #16. Memória continua
-vazia com o estado `pendente_19`; por isso a execução integrada segue marcada
-como `parcial`. O CSV é um registro básico de execução da #34, não
+O CSV registra a contagem de cruzamentos calculada pela #16 e a estimativa de
+memória das estruturas com o estado `estimada_modelo_alocacoes`. A execução
+integrada segue marcada como `parcial` porque lista e matriz ainda não podem ser
+selecionadas e executadas isoladamente. O CSV é um registro básico de execução da #34, não
 substitui a organização dos benchmarks e dados para gráficos das outras issues.
 
 Códigos de saída: `0` para execução parcial bem-sucedida ou ajuda, `1` para erro
@@ -63,7 +64,7 @@ de execução/gravação e `2` para argumentos inválidos ou seleção indispon�
 | Cruzamentos | Contagem integrada (#16) |
 | Apresentar resultados | Relatório completo da #17 integrado |
 | Tempo | Medições disponíveis da #18 integradas |
-| Memória | Pendente de API da #19 |
+| Memória | Estimativas comparáveis da lista e da matriz integradas (#19) |
 | Salvar resultados | CSV básico implementado, com campos pendentes explícitos |
 
 O grafo atual aloca **lista e matriz simultaneamente** e os algoritmos não
@@ -73,9 +74,17 @@ explicativo antes de executar; não apenas trocam o rótulo das mesmas mediçõe
 Alinhar com os responsáveis pelas estruturas como selecionar a representação
 e encaminhar as operações/medições antes de habilitar esses modos.
 
-Para memória, combinar a unidade e o significado da medição (estrutura, processo
-ou pico) com o responsável pela #19 antes de preencher `memoria_bytes`. Para
-cruzamentos, o relatório e o CSV contam pares de arestas que se cruzam na mesma
+Para memória, o terminal e o CSV mostram bytes comuns, total estimado para a
+lista e total estimado para a matriz. A estimativa soma o tamanho dos blocos
+solicitados ao alocador: estrutura do grafo, capacidades reservadas para
+vértices e arestas, vetor de cabeças e nós da lista, ou células da matriz.
+Overhead interno do alocador, fragmentação e buffers temporários dos algoritmos
+ficam de fora. Como o grafo mantém as duas representações simultaneamente, os
+totais da lista e da matriz são modelos comparativos sobre o mesmo grafo; não
+são medições de RSS nem execuções isoladas. A comparação experimental real entre
+modos depende da seleção de representação na #34.
+
+Para cruzamentos, o relatório e o CSV contam pares de arestas que se cruzam na mesma
 execução analisada por Euler.
 
 A API de construção existente retorna zero tanto para ausência de arestas como
@@ -94,5 +103,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_fluxo_parcial.ps1
 O roteiro verifica o fluxo disponível com recortes do dataset real, preservação
 de execuções no CSV, dados pendentes, limites, ajuda, modo indisponível, falhas
 de leitura/gravação e compatibilidade posicional. Usa arquivos isolados em
-`build/`. Não encerra a #35: ainda faltam seleção entre estruturas, memória e
-análise completa para o teste de integração de toda a Fase I.
+`build/`. Não encerra a #35: ainda falta seleção entre estruturas e análise
+completa para o teste de integração de toda a Fase I.

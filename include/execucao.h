@@ -16,6 +16,8 @@ typedef struct {
     ResultadoEuler euler;
     int possui_cruzamentos;
     size_t quantidade_cruzamentos;
+    EstimativaMemoriaGrafo memoria;
+    int memoria_disponivel;
     double leitura_ms;
     double construcao_ms;
     double euler_ms;
