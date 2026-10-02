@@ -66,7 +66,8 @@ static int carregar_registro(Grafo *grafo, char *linha)
         !converter_double(campos[5], &latitude) || !converter_double(campos[6], &longitude) ||
         !converter_double(campos[7], &alcance) || !converter_uint(campos[8], &amostras)) return 0;
     (void)amostras;
-    return grafo_adicionar_antena(grafo, mcc, net, area, cell, latitude, longitude, alcance) >= 0;
+    return grafo_adicionar_antena_ex(grafo, mcc, net, area, cell, latitude,
+        longitude, alcance);
 }
 
 int dataset_carregar_opencellid(Grafo *grafo, const char *caminho, size_t limite,
@@ -108,10 +109,15 @@ int dataset_carregar_opencellid(Grafo *grafo, const char *caminho, size_t limite
             int caractere;
             while ((caractere = fgetc(arquivo)) != '\n' && caractere != EOF) {}
             ++relatorio->registros_invalidos;
-        } else if (carregar_registro(grafo, linha)) {
-            ++relatorio->registros_carregados;
         } else {
-            ++relatorio->registros_invalidos;
+            int status = carregar_registro(grafo, linha);
+            if (status > 0) ++relatorio->registros_carregados;
+            else if (status == 0) ++relatorio->registros_invalidos;
+            else {
+                definir_erro(erro, tamanho_erro, "Falha de memoria ao adicionar antena.");
+                fclose(arquivo);
+                return 0;
+            }
         }
     }
     if (ferror(arquivo)) {
@@ -119,6 +125,9 @@ int dataset_carregar_opencellid(Grafo *grafo, const char *caminho, size_t limite
         fclose(arquivo);
         return 0;
     }
-    fclose(arquivo);
+    if (fclose(arquivo) != 0) {
+        definir_erro(erro, tamanho_erro, "Erro ao finalizar a leitura do dataset.");
+        return 0;
+    }
     return 1;
 }
