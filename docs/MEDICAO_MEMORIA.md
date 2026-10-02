@@ -27,12 +27,11 @@ bufferização de I/O ou buffers temporários usados na construção/análise.
 Consequentemente, não deve ser descrita no artigo como memória física total do
 processo.
 
-O código atual mantém lista e matriz simultaneamente. Os totais separados são
-comparações de modelos para cada representação, com o mesmo custo comum; não
-significam que a aplicação executou em modo exclusivo de lista ou de matriz.
-Para benchmark experimental de cada implementação, será necessária a seleção
-real de uma estrutura por execução. O campo `estrutura` continua `conjunta` e a
-execução geral permanece parcial enquanto essa seleção não existir.
+O modo `conjunta` mantém ambas as representações. Os modos `lista` e `matriz`
+alocam apenas a estrutura selecionada, e o total da estrutura ausente é zero.
+O campo `estrutura` identifica o modo efetivamente executado. Em modo exclusivo,
+o total comum mais o total selecionado corresponde aos bytes estimados do grafo
+naquela execução.
 
 ## Reprodução
 

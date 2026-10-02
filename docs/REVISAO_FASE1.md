@@ -61,14 +61,14 @@ logs versionados. As saídas temporárias permanecem ignoradas pelo Git.
 ## Pendências para concluir a #36
 
 1. **#16/#17:** integrar e validar quantidade de cruzamentos e concluir análise.
-2. **#34:** selecionar efetivamente lista ou matriz com as APIs das estruturas
-   (#7/#8/#11); a estimativa de memória da #19 está integrada, mas não substitui
-   execuções isoladas para comparar consumo observado por modo.
+2. **#23/#24:** executar e revisar benchmarks independentes de lista e matriz
+   com subconjuntos equivalentes; a seleção real das estruturas já está
+   disponível, mas os resultados devem ser comparados funcionalmente.
 3. **#35:** executar a validação completa após as integrações, corrigindo erros
    impeditivos e registrando evidências finais.
-4. **Resultados:** disponibilizar benchmarks, comparação entre estruturas,
-   crescimento experimental e dados finais para gráficos (#22–#27), conforme
-   o escopo de cada responsável; as medições atuais não substituem esses itens.
+4. **Resultados:** os subconjuntos da #22 e o benchmark de lista da #23 estão
+   versionados; concluir a comparação com a matriz (#24), os estudos de
+   crescimento e os dados finais para gráficos (#25–#27), conforme o escopo.
 5. **Memória e documentação:** conferir a entrega da #28 e a documentação dos
    algoritmos (#31). Permanecem limitações conhecidas: retorno ambíguo de falhas
    de alocação e geometria que não cobre todos os contatos/sobreposições.

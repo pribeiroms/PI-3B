@@ -3,9 +3,9 @@
 Aplicação em C para modelar uma rede de telecomunicações como grafo e analisar
 a condição necessária de Euler e cruzamentos no traçado das conexões.
 
-A Fase I está **parcialmente integrada**: o modo atual mantém lista e matriz
-simultaneamente. A seleção exclusiva da estrutura ainda está pendente. A
-revisão da #36 não libera a entrega final.
+A Fase I está **parcialmente integrada**: a aplicação oferece modos exclusivos
+de lista e matriz e um modo conjunto. Os benchmarks e a validação completa da
+Fase I ainda têm pendências. A revisão da #36 não libera a entrega final.
 
 ## Estrutura
 
@@ -49,7 +49,15 @@ conexão entre antenas e a interpretação do resultado de cruzamentos.
 
 Os subconjuntos reproduzíveis para testes de estresse (N=100, 500, 1.000 e
 5.000), suas contagens e a geração estão descritos em
-[docs/PROTOCOLO_EXPERIMENTAL.md](docs/PROTOCOLO_EXPERIMENTAL.md).
+[docs/PROTOCOLO_EXPERIMENTAL.md](docs/PROTOCOLO_EXPERIMENTAL.md). O benchmark
+repetido da lista está em [docs/BENCHMARK_LISTA.md](docs/BENCHMARK_LISTA.md),
+com dados brutos em `data/benchmarks/benchmark_lista.csv`.
+
+Para executar novas repetições da lista e salvá-las em `results/`:
+
+```sh
+mingw32-make benchmark-lista
+```
 
 Os executáveis são gerados em `build/`. Para removê-los:
 

@@ -72,9 +72,9 @@ sem apenas atualizar valores para esconder uma falha.
 | --- | --- |
 | Carregamento real | Validado nos recortes e conferido hash antes/depois |
 | Construção do grafo | V/E conferidos entre terminal, CSV e referência |
-| Lista de Adjacência | Exercitada na estrutura conjunta; testes unitários existentes passam |
-| Matriz de Adjacência | Exercitada na estrutura conjunta; testes unitários existentes passam |
-| Alternância entre estruturas | Bloqueada; modos exclusivos retornam erro explícito e não exportam resultados |
+| Lista de Adjacência | Modos exclusivos e conjunto exercitados; benchmark específico na #23 |
+| Matriz de Adjacência | Modo exclusivo validado em recorte pequeno; benchmark específico pendente na #24 |
+| Alternância entre estruturas | Modos independentes registrados em execuções separadas; comparabilidade funcional verificada |
 | Euler | Conferido com V/E e mensagem de limitação presente |
 | Cruzamentos | Presença, contagem e conclusão conferidas no terminal e no CSV |
 | Tempo | Quatro etapas registradas e valores válidos |
@@ -89,12 +89,10 @@ Nenhum erro impeditivo novo da aplicação foi encontrado nos cenários disponí
 
 ## O que falta para concluir
 
-1. Concluir na #34 a seleção efetiva de lista e matriz, alinhada às APIs das
-   #7/#8/#11; executar os mesmos recortes em cada modo e comparar os resultados
-   funcionais, sem exigir tempos ou memória iguais.
+1. Revisar o benchmark de lista registrado em [BENCHMARK_LISTA.md](BENCHMARK_LISTA.md)
+   e executar o benchmark da matriz (#24) nos mesmos subconjuntos.
 2. Conferir a metodologia e os limites da estimativa da #19 em
-   [MEDICAO_MEMORIA.md](MEDICAO_MEMORIA.md); a seleção exclusiva por estrutura
-   permanece pendente da #34.
+   [MEDICAO_MEMORIA.md](MEDICAO_MEMORIA.md).
 3. Atualizar as evidências da #35 com a contagem integrada da #16 e o relatório
    completo da #17; manter os casos conhecidos de cruzamentos nos testes.
 4. Executar novamente a aplicação completa, corrigir erros impeditivos e

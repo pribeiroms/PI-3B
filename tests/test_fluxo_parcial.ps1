@@ -43,7 +43,7 @@ try {
             $linha.status_cruzamentos -ne 'calculado') {
             throw 'Metadados incorretos no CSV.'
         }
-        foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms', 'cruzamentos_cpu_ms')) {
+        foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms', 'cruzamentos_cpu_ms', 'total_cpu_ms')) {
             $valor = [double]::Parse($linha.$campo, [Globalization.CultureInfo]::InvariantCulture)
             if ($valor -lt 0) { throw 'Tempo indisponivel durante teste.' }
         }
@@ -51,9 +51,27 @@ try {
     foreach ($limite in @('-1', 'abc', '1.5', '10abc', '184467440737095516160')) {
         $null = Executar @('--limite', $limite, '--saida', $csv) 2
     }
-    foreach ($estrutura in @('lista', 'matriz', 'invalida')) {
-        $null = Executar @('--estrutura', $estrutura, '--saida', $csv) 2
+    foreach ($estrutura in @('lista', 'matriz')) {
+        $subset = Join-Path $raizProjeto 'data/subconjuntos/opencellid_n100.csv'
+        $saidaEstrutura = Executar @('--dataset', $subset, '--limite', '0',
+            '--estrutura', $estrutura, '--saida', $csv)
+        $linhasEstrutura = @(Import-Csv -LiteralPath $csv)
+        $ultimaEstrutura = $linhasEstrutura[-1]
+        $memoriaExclusivaOK = if ($estrutura -eq 'lista') {
+            $ultimaEstrutura.memoria_lista_total_bytes -match '^\d+$' -and
+                $ultimaEstrutura.memoria_matriz_total_bytes -eq '0'
+        } else {
+            $ultimaEstrutura.memoria_lista_total_bytes -eq '0' -and
+                $ultimaEstrutura.memoria_matriz_total_bytes -match '^\d+$'
+        }
+        if ($ultimaEstrutura.estrutura -ne $estrutura -or
+            $ultimaEstrutura.vertices -ne '100' -or
+            -not $memoriaExclusivaOK -or
+            $saidaEstrutura -notmatch "Estrutura: $estrutura de adjacencia") {
+            throw "Selecao ou memoria exclusiva incorreta para $estrutura."
+        }
     }
+    $null = Executar @('--estrutura', 'invalida', '--saida', $csv) 2
     $null = Executar @('--limite') 2
     $null = Executar @('--limite', '1', '--limite', '2') 2
     $null = Executar @('--desconhecida', '1') 2
@@ -61,7 +79,7 @@ try {
     $null = Executar @('--limite', '1', '--saida', (Join-Path $pastaTeste 'inexistente/saida.csv')) 1
     $ajuda = Executar @('--help')
     if ($ajuda -notmatch 'Uso:') { throw 'Ajuda ausente.' }
-    if (@(Import-Csv -LiteralPath $csv).Count -ne 2) { throw 'Falhas alteraram resultados existentes.' }
+    if (@(Import-Csv -LiteralPath $csv).Count -ne 4) { throw 'Falhas alteraram resultados existentes.' }
 
     $fixture = Join-Path $pastaTeste 'antenas, exemplo.csv'
     @(
@@ -84,7 +102,7 @@ try {
     $vazio = Join-Path $pastaTeste 'vazio.csv'
     'radio,mcc,net,area,cell,lat,lon,range,samples' | Set-Content -Encoding ascii $vazio
     $null = Executar @('--dataset', $vazio, '--saida', $csv) 1
-    if (@(Import-Csv -LiteralPath $csv).Count -ne 3) { throw 'Execucao vazia exportada.' }
+    if (@(Import-Csv -LiteralPath $csv).Count -ne 5) { throw 'Execucao vazia exportada.' }
 
     # Isola a saida padrao para testar compatibilidade com argumentos posicionais.
     New-Item -ItemType Directory -Path (Join-Path $pastaTeste 'results') | Out-Null

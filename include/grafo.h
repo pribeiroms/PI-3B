@@ -58,8 +58,17 @@ typedef struct {
 	size_t memoria_matriz_total_bytes;
 } EstimativaMemoriaGrafo;
 
+typedef enum {
+	GRAFO_ESTRUTURA_CONJUNTA,
+	GRAFO_LISTA_ADJACENCIA,
+	GRAFO_MATRIZ_ADJACENCIA
+} EstruturaGrafo;
+
 /* Cria um grafo vazio. Retorna NULL caso a alocação falhe. */
 Grafo *grafo_criar(void);
+
+/* Cria um grafo com a representação selecionada; grafo_criar mantém o modo conjunto. */
+Grafo *grafo_criar_com_estrutura(EstruturaGrafo estrutura);
 
 /* Libera todos os recursos associados ao grafo. */
 void grafo_destruir(Grafo *grafo);

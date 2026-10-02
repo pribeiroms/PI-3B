@@ -27,11 +27,10 @@ void execucao_exibir_ajuda(void)
 {
     puts("Uso: grafo.exe [dataset.csv [limite]]\n"
          " ou: grafo.exe [--dataset arquivo] [--limite N] "
-         "[--estrutura conjunta] [--saida arquivo.csv]\n"
+         "[--estrutura lista|matriz|conjunta] [--saida arquivo.csv]\n"
          "Padroes: dataset versionado, limite 1000, saida results/execucoes.csv.\n"
          "Limite 0 carrega todos os registros validos; N limita os vertices.\n"
-         "Estrutura conjunta: lista e matriz mantidas simultaneamente.\n"
-         "Selecao exclusiva de lista/matriz ainda indisponivel.\n"
+         "A estrutura selecionada e alocada para a execucao.\n"
          "Nao misture argumentos posicionais com opcoes nomeadas.\n"
          "--help ou --ajuda exibe esta mensagem.");
 }
@@ -43,6 +42,7 @@ int execucao_ler_opcoes(int argc, char *argv[], OpcoesExecucao *opcoes)
     opcoes->dataset = "data/opencellid_brasil_filtrado.csv";
     opcoes->limite = 1000U;
     opcoes->saida = "results/execucoes.csv";
+    opcoes->estrutura = GRAFO_ESTRUTURA_CONJUNTA;
     if (argc == 2 && (strcmp(argv[1], "--help") == 0 ||
                       strcmp(argv[1], "--ajuda") == 0)) return 0;
     if (argc > 1 && argv[1][0] != '-') {
@@ -68,11 +68,13 @@ int execucao_ler_opcoes(int argc, char *argv[], OpcoesExecucao *opcoes)
             opcoes->saida = valor;
         } else if (strcmp(argv[i], "--estrutura") == 0) {
             opcao = 8U;
-            if (strcmp(valor, "lista") == 0 || strcmp(valor, "matriz") == 0) {
-                fputs("Selecao exclusiva indisponivel: a API atual mantem lista e matriz juntas.\n", stderr);
-                return -1;
-            }
-            if (strcmp(valor, "conjunta") != 0) goto invalido;
+            if (strcmp(valor, "lista") == 0)
+                opcoes->estrutura = GRAFO_LISTA_ADJACENCIA;
+            else if (strcmp(valor, "matriz") == 0)
+                opcoes->estrutura = GRAFO_MATRIZ_ADJACENCIA;
+            else if (strcmp(valor, "conjunta") == 0)
+                opcoes->estrutura = GRAFO_ESTRUTURA_CONJUNTA;
+            else goto invalido;
         } else goto invalido;
         if ((vistos & opcao) != 0U) goto invalido;
         vistos |= opcao;
@@ -102,13 +104,22 @@ static const char *nome_euler(ResultadoEuler euler)
     }
 }
 
+static const char *nome_estrutura(EstruturaGrafo estrutura)
+{
+    switch (estrutura) {
+        case GRAFO_LISTA_ADJACENCIA: return "lista";
+        case GRAFO_MATRIZ_ADJACENCIA: return "matriz";
+        default: return "conjunta";
+    }
+}
+
 int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
 {
     const char *cabecalho = "data_utc,dataset,limite,estrutura,vertices,arestas,"
         "registros_invalidos,euler,possui_cruzamentos,quantidade_cruzamentos,"
         "status_cruzamentos,memoria_comum_bytes,memoria_lista_total_bytes,"
         "memoria_matriz_total_bytes,status_memoria,leitura_cpu_ms,"
-        "construcao_cpu_ms,euler_cpu_ms,cruzamentos_cpu_ms,status_analise\n";
+        "construcao_cpu_ms,euler_cpu_ms,cruzamentos_cpu_ms,total_cpu_ms,status_analise\n";
     char linha[1024];
     char data[32] = "indisponivel";
     time_t agora = time(NULL);
@@ -131,8 +142,8 @@ int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
     escrever_campo(arquivo, data);
     fputc(',', arquivo);
     escrever_campo(arquivo, opcoes->dataset);
-    fprintf(arquivo, ",%zu,conjunta,%zu,%zu,%zu,%s,%d,%zu,calculado,",
-        opcoes->limite, r->vertices, r->arestas,
+    fprintf(arquivo, ",%zu,%s,%zu,%zu,%zu,%s,%d,%zu,calculado,",
+        opcoes->limite, nome_estrutura(opcoes->estrutura), r->vertices, r->arestas,
         r->carregamento.registros_invalidos, nome_euler(r->euler),
         r->possui_cruzamentos, r->quantidade_cruzamentos);
     if (r->memoria_disponivel) {
@@ -142,9 +153,8 @@ int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
     } else {
         fputs(",,,indisponivel,", arquivo);
     }
-    fprintf(arquivo, "%.3f,%.3f,%.3f,%.3f,parcial\n", r->leitura_ms,
-        r->construcao_ms, r->euler_ms,
-        r->cruzamentos_ms);
+    fprintf(arquivo, "%.3f,%.3f,%.3f,%.3f,%.3f,parcial\n", r->leitura_ms,
+        r->construcao_ms, r->euler_ms, r->cruzamentos_ms, r->total_cpu_ms);
     ok = !ferror(arquivo);
     if (fclose(arquivo) != 0) ok = 0;
     return ok;

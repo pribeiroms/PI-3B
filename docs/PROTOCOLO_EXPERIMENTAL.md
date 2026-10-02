@@ -39,11 +39,10 @@ algoritmo, não propriedades fixas do CSV.
 | 5.000 | `data/subconjuntos/opencellid_n5000.csv` | 5.000 | 1.897 | `591E73D967705BA75593EB9706EDDF75CE459B3D3191F7E99423673852CF8F79` |
 
 O conjunto de 5.000 registros foi incluído como recorte maior viável no
-ambiente atual. Não foi usado o dataset completo: a implementação mantém uma
-matriz de adjacência quadrada e compara pares de antenas ao construir o grafo.
-Os testes de estresse medem o comportamento desta implementação conjunta; não
-substituem execuções independentes de lista e matriz, que dependem da seleção
-real de representação.
+ambiente atual. Não foi usado o dataset completo. O alvo de validação desta
+issue executa os recortes no modo conjunto; os benchmarks isolados da lista
+estão em [BENCHMARK_LISTA.md](BENCHMARK_LISTA.md), e os da matriz permanecem
+para a issue #24.
 
 ## Validação reproduzível
 

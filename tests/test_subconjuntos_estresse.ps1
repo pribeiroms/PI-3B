@@ -1,6 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $raizProjeto = Split-Path -Parent $PSScriptRoot
 $executavel = Join-Path $raizProjeto 'build/grafo.exe'
+$idExecucao = [guid]::NewGuid().ToString('N')
 $referencias = @(
     @{ n = 100; arestas = 2; sha256 = '25774DBA4E864B0207E85712A8AFBDE29613D2405F0A4508B05CB889390517C7' },
     @{ n = 500; arestas = 48; sha256 = '4CACFCA245705FA633A75AB468B2C7E7623317D271FA9E75DD93ACA0EEB84D3E' },
@@ -15,7 +16,7 @@ try {
     foreach ($referencia in $referencias) {
         $n = $referencia.n
         $dataset = "data/subconjuntos/opencellid_n$n.csv"
-        $csv = "build/subconjunto_n$n.csv"
+        $csv = "build/subconjunto-$idExecucao-n$n.csv"
         $hash = (Get-FileHash -LiteralPath $dataset -Algorithm SHA256).Hash
         if ($hash -ne $referencia.sha256) { throw "Hash inesperado para N=$n." }
         $saida = & $executavel --dataset $dataset --limite 0 --estrutura conjunta --saida $csv 2>&1

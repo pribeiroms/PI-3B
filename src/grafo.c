@@ -7,6 +7,7 @@
 #include "grafo.h"
 
 struct Grafo {
+    EstruturaGrafo estrutura;
     Vertice *vertices;
     size_t quantidade_vertices;
     size_t capacidade_vertices;
@@ -42,31 +43,33 @@ static int reservar_arestas(Grafo *grafo)
 
 static int expandir_adjacencia(Grafo *grafo)
 {
-    size_t antiga_ordem = grafo->matriz_adjacencia.ordem;
+    size_t antiga_ordem = grafo->capacidade_listas > grafo->matriz_adjacencia.ordem ?
+        grafo->capacidade_listas : grafo->matriz_adjacencia.ordem;
     size_t nova_ordem = antiga_ordem == 0U ? 128U : antiga_ordem * 2U;
-    NoAdjacencia **listas = realloc(grafo->lista_adjacencia.listas,
-                                   nova_ordem * sizeof(*listas));
-    unsigned char *dados;
     size_t linha;
-
-    if (listas == NULL) return 0;
-    grafo->lista_adjacencia.listas = listas;
-    grafo->capacidade_listas = nova_ordem;
-    dados = calloc(nova_ordem * nova_ordem, sizeof(*dados));
-    if (dados == NULL) {
-        return 0;
+    if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
+        NoAdjacencia **listas = realloc(grafo->lista_adjacencia.listas,
+            nova_ordem * sizeof(*listas));
+        if (listas == NULL) return 0;
+        for (linha = grafo->capacidade_listas; linha < nova_ordem; ++linha)
+            listas[linha] = NULL;
+        grafo->lista_adjacencia.listas = listas;
+        grafo->capacidade_listas = nova_ordem;
+        grafo->lista_adjacencia.quantidade_vertices = nova_ordem;
     }
-    for (linha = 0U; linha < antiga_ordem; ++linha) {
-        memcpy(&dados[linha * nova_ordem],
-               &grafo->matriz_adjacencia.dados[linha * antiga_ordem],
-               antiga_ordem * sizeof(*dados));
+    if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
+        size_t ordem_matriz = grafo->matriz_adjacencia.ordem;
+        unsigned char *dados = calloc(nova_ordem * nova_ordem, sizeof(*dados));
+        if (dados == NULL) return 0;
+        for (linha = 0U; linha < ordem_matriz; ++linha) {
+            memcpy(&dados[linha * nova_ordem],
+                   &grafo->matriz_adjacencia.dados[linha * ordem_matriz],
+                   ordem_matriz * sizeof(*dados));
+        }
+        free(grafo->matriz_adjacencia.dados);
+        grafo->matriz_adjacencia.dados = dados;
+        grafo->matriz_adjacencia.ordem = nova_ordem;
     }
-    for (linha = antiga_ordem; linha < nova_ordem; ++linha) listas[linha] = NULL;
-    free(grafo->matriz_adjacencia.dados);
-    grafo->lista_adjacencia.listas = listas;
-    grafo->lista_adjacencia.quantidade_vertices = nova_ordem;
-    grafo->matriz_adjacencia.dados = dados;
-    grafo->matriz_adjacencia.ordem = nova_ordem;
     return 1;
 }
 
@@ -81,7 +84,18 @@ static void liberar_lista(NoAdjacencia *lista)
 
 Grafo *grafo_criar(void)
 {
-    return calloc(1U, sizeof(Grafo));
+    return grafo_criar_com_estrutura(GRAFO_ESTRUTURA_CONJUNTA);
+}
+
+Grafo *grafo_criar_com_estrutura(EstruturaGrafo estrutura)
+{
+    Grafo *grafo;
+    if (estrutura != GRAFO_ESTRUTURA_CONJUNTA &&
+        estrutura != GRAFO_LISTA_ADJACENCIA &&
+        estrutura != GRAFO_MATRIZ_ADJACENCIA) return NULL;
+    grafo = calloc(1U, sizeof(*grafo));
+    if (grafo != NULL) grafo->estrutura = estrutura;
+    return grafo;
 }
 
 void grafo_destruir(Grafo *grafo)
@@ -100,6 +114,7 @@ void grafo_destruir(Grafo *grafo)
 
 int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice)
 {
+    size_t capacidade_adjacencia;
     if (grafo == NULL || !isfinite(vertice.coordenadas.latitude) ||
         !isfinite(vertice.coordenadas.longitude) || !isfinite(vertice.alcance_metros) ||
         vertice.coordenadas.latitude < -90.0 || vertice.coordenadas.latitude > 90.0 ||
@@ -107,7 +122,14 @@ int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice)
         vertice.alcance_metros < 0.0) return -1;
     if (grafo->quantidade_vertices == grafo->capacidade_vertices && !reservar_vertices(grafo))
         return -1;
-    if (grafo->quantidade_vertices == grafo->matriz_adjacencia.ordem && !expandir_adjacencia(grafo))
+    if (grafo->estrutura == GRAFO_LISTA_ADJACENCIA)
+        capacidade_adjacencia = grafo->capacidade_listas;
+    else if (grafo->estrutura == GRAFO_MATRIZ_ADJACENCIA)
+        capacidade_adjacencia = grafo->matriz_adjacencia.ordem;
+    else
+        capacidade_adjacencia = grafo->capacidade_listas < grafo->matriz_adjacencia.ordem ?
+            grafo->capacidade_listas : grafo->matriz_adjacencia.ordem;
+    if (grafo->quantidade_vertices == capacidade_adjacencia && !expandir_adjacencia(grafo))
         return -1;
     vertice.id = grafo->quantidade_vertices;
     grafo->vertices[grafo->quantidade_vertices] = vertice;
@@ -125,29 +147,33 @@ int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
 
 int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
 {
-    NoAdjacencia *origem_no;
-    NoAdjacencia *destino_no;
+    NoAdjacencia *origem_no = NULL;
+    NoAdjacencia *destino_no = NULL;
 
     if (grafo == NULL || origem == destino || origem >= grafo->quantidade_vertices ||
         destino >= grafo->quantidade_vertices || grafo_sao_adjacentes(grafo, origem, destino))
         return 0;
     if (grafo->quantidade_arestas == grafo->capacidade_arestas && !reservar_arestas(grafo))
         return 0;
-    origem_no = malloc(sizeof(*origem_no));
-    destino_no = malloc(sizeof(*destino_no));
-    if (origem_no == NULL || destino_no == NULL) {
-        free(origem_no);
-        free(destino_no);
-        return 0;
+    if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
+        origem_no = malloc(sizeof(*origem_no));
+        destino_no = malloc(sizeof(*destino_no));
+        if (origem_no == NULL || destino_no == NULL) {
+            free(origem_no);
+            free(destino_no);
+            return 0;
+        }
+        origem_no->vertice = destino;
+        origem_no->proximo = grafo->lista_adjacencia.listas[origem];
+        destino_no->vertice = origem;
+        destino_no->proximo = grafo->lista_adjacencia.listas[destino];
+        grafo->lista_adjacencia.listas[origem] = origem_no;
+        grafo->lista_adjacencia.listas[destino] = destino_no;
     }
-    origem_no->vertice = destino;
-    origem_no->proximo = grafo->lista_adjacencia.listas[origem];
-    destino_no->vertice = origem;
-    destino_no->proximo = grafo->lista_adjacencia.listas[destino];
-    grafo->lista_adjacencia.listas[origem] = origem_no;
-    grafo->lista_adjacencia.listas[destino] = destino_no;
-    grafo->matriz_adjacencia.dados[origem * grafo->matriz_adjacencia.ordem + destino] = 1U;
-    grafo->matriz_adjacencia.dados[destino * grafo->matriz_adjacencia.ordem + origem] = 1U;
+    if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
+        grafo->matriz_adjacencia.dados[origem * grafo->matriz_adjacencia.ordem + destino] = 1U;
+        grafo->matriz_adjacencia.dados[destino * grafo->matriz_adjacencia.ordem + origem] = 1U;
+    }
     grafo->arestas[grafo->quantidade_arestas].origem = origem;
     grafo->arestas[grafo->quantidade_arestas].destino = destino;
     ++grafo->quantidade_arestas;
@@ -209,12 +235,16 @@ size_t grafo_construir_conexoes(Grafo *grafo)
     double *menor;
 
     if (grafo == NULL || grafo->quantidade_vertices < 2U) return 0U;
-    for (i = 0U; i < grafo->lista_adjacencia.quantidade_vertices; ++i) {
-        liberar_lista(grafo->lista_adjacencia.listas[i]);
-        grafo->lista_adjacencia.listas[i] = NULL;
+    if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
+        for (i = 0U; i < grafo->lista_adjacencia.quantidade_vertices; ++i) {
+            liberar_lista(grafo->lista_adjacencia.listas[i]);
+            grafo->lista_adjacencia.listas[i] = NULL;
+        }
     }
-    memset(grafo->matriz_adjacencia.dados, 0,
-           grafo->matriz_adjacencia.ordem * grafo->matriz_adjacencia.ordem);
+    if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
+        memset(grafo->matriz_adjacencia.dados, 0,
+               grafo->matriz_adjacencia.ordem * grafo->matriz_adjacencia.ordem);
+    }
     grafo->quantidade_arestas = 0U;
     proxima = malloc(grafo->quantidade_vertices * sizeof(*proxima));
     menor = malloc(grafo->quantidade_vertices * sizeof(*menor));
@@ -261,15 +291,22 @@ size_t grafo_quantidade_arestas(const Grafo *grafo)
 
 int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino)
 {
+    const NoAdjacencia *vizinho;
     if (grafo == NULL || origem >= grafo->quantidade_vertices ||
         destino >= grafo->quantidade_vertices) return 0;
-    return grafo->matriz_adjacencia.dados[
-        origem * grafo->matriz_adjacencia.ordem + destino] != 0U;
+    if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA)
+        return grafo->matriz_adjacencia.dados[
+            origem * grafo->matriz_adjacencia.ordem + destino] != 0U;
+    for (vizinho = grafo->lista_adjacencia.listas[origem]; vizinho != NULL;
+         vizinho = vizinho->proximo)
+        if (vizinho->vertice == destino) return 1;
+    return 0;
 }
 
 const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice)
 {
-    if (grafo == NULL || vertice >= grafo->quantidade_vertices) return NULL;
+    if (grafo == NULL || grafo->estrutura == GRAFO_MATRIZ_ADJACENCIA ||
+        vertice >= grafo->quantidade_vertices) return NULL;
     return grafo->lista_adjacencia.listas[vertice];
 }
 
@@ -449,6 +486,8 @@ int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa
         !somar_bytes(comum, listas_bytes, &lista_total) ||
         !somar_bytes(lista_total, nos_bytes, &lista_total) ||
         !somar_bytes(comum, matriz_bytes, &matriz_total)) return 0;
+    if (grafo->estrutura == GRAFO_MATRIZ_ADJACENCIA) lista_total = 0U;
+    if (grafo->estrutura == GRAFO_LISTA_ADJACENCIA) matriz_total = 0U;
     estimativa->memoria_comum_bytes = comum;
     estimativa->memoria_lista_total_bytes = lista_total;
     estimativa->memoria_matriz_total_bytes = matriz_total;

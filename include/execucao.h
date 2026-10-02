@@ -7,6 +7,7 @@ typedef struct {
     const char *dataset;
     size_t limite;
     const char *saida;
+    EstruturaGrafo estrutura;
 } OpcoesExecucao;
 
 typedef struct {
@@ -22,6 +23,7 @@ typedef struct {
     double construcao_ms;
     double euler_ms;
     double cruzamentos_ms;
+    double total_cpu_ms;
 } ResultadoExecucao;
 
 /* Retorna 1 em sucesso, 0 para ajuda e -1 para argumentos invalidos. */

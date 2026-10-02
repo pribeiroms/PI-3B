@@ -60,6 +60,33 @@ static void teste_estimativa_memoria(void)
     grafo_destruir(grafo);
 }
 
+static void teste_representacoes_exclusivas(void)
+{
+    Grafo *lista = grafo_criar_com_estrutura(GRAFO_LISTA_ADJACENCIA);
+    Grafo *matriz = grafo_criar_com_estrutura(GRAFO_MATRIZ_ADJACENCIA);
+    EstimativaMemoriaGrafo memoria_lista, memoria_matriz;
+    assert(lista != NULL && matriz != NULL);
+    assert(grafo_adicionar_antena(lista, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
+    assert(grafo_adicionar_antena(lista, 1U, 1U, 1U, 2U, 0.0, 1.0, 1.0) == 1);
+    assert(grafo_adicionar_aresta(lista, 0U, 1U));
+    assert(grafo_sao_adjacentes(lista, 0U, 1U));
+    assert(grafo_vizinhos(lista, 0U) != NULL);
+    assert(grafo_estimar_memoria(lista, &memoria_lista));
+    assert(memoria_lista.memoria_lista_total_bytes > memoria_lista.memoria_comum_bytes);
+    assert(memoria_lista.memoria_matriz_total_bytes == 0U);
+
+    assert(grafo_adicionar_antena(matriz, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
+    assert(grafo_adicionar_antena(matriz, 1U, 1U, 1U, 2U, 0.0, 1.0, 1.0) == 1);
+    assert(grafo_adicionar_aresta(matriz, 0U, 1U));
+    assert(grafo_sao_adjacentes(matriz, 0U, 1U));
+    assert(grafo_vizinhos(matriz, 0U) == NULL);
+    assert(grafo_estimar_memoria(matriz, &memoria_matriz));
+    assert(memoria_matriz.memoria_lista_total_bytes == 0U);
+    assert(memoria_matriz.memoria_matriz_total_bytes > memoria_matriz.memoria_comum_bytes);
+    grafo_destruir(lista);
+    grafo_destruir(matriz);
+}
+
 static void teste_representacoes_do_grafo(void)
 {
     Grafo *grafo = grafo_criar();
@@ -228,6 +255,7 @@ static void teste_quantidades_apos_construcao_automatica(void)
 int main(void)
 {
     teste_estimativa_memoria();
+    teste_representacoes_exclusivas();
     teste_cria_e_destroi_grafo();
     teste_cria_conexao_elegivel();
     teste_detecta_cruzamento();

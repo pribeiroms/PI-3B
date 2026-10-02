@@ -19,8 +19,7 @@ $resumo = [ordered]@{
     sistema = [Environment]::OSVersion.ToString()
     casos = $casos
     pendencias = @(
-        'Lista e matriz em execucoes independentes e alternancia: depende da #34 e da API das estruturas.',
-        'Comparacao em execucoes independentes das estruturas: depende da selecao efetiva da #34.',
+        'Benchmark repetido da matriz: issue #24.',
         'Revisar os resultados completos da #17 apos a integracao na #34.'
     )
 }
@@ -91,7 +90,7 @@ try {
             $saida.Contains("Lista de adjacencia: $($r.memoria_lista_total_bytes)`r`n") -and
             $saida.Contains("Matriz de adjacencia: $($r.memoria_matriz_total_bytes)`r`n") -and
             $r.status_analise -eq 'parcial') 'Pendencias foram apresentadas como resultados completos.'
-        foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms', 'cruzamentos_cpu_ms')) {
+        foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms', 'cruzamentos_cpu_ms', 'total_cpu_ms')) {
             $tempo = [double]::Parse($r.$campo, [Globalization.CultureInfo]::InvariantCulture)
             Conferir ($tempo -ge 0 -and -not [double]::IsInfinity($tempo) -and
                 -not [double]::IsNaN($tempo)) "Medicao invalida: $campo."
@@ -105,11 +104,23 @@ try {
         Conferir ($linhas[2].$campo -eq $linhas[3].$campo) "Repeticao produziu resultado diferente: $campo."
     }
     foreach ($estrutura in @('lista', 'matriz')) {
-        $null = ExecutarCaso ('pendencia-' + $estrutura) @('--estrutura', $estrutura, '--saida', $csv) 2
-        $erro = Get-Content -Raw (Join-Path $pasta ('pendencia-' + $estrutura + '.stderr.log'))
-        Conferir ($erro.Contains('Selecao exclusiva indisponivel')) 'Modo pendente nao foi explicado.'
+        $subset = Join-Path $raizProjeto 'data/subconjuntos/opencellid_n100.csv'
+        $saidaEstrutura = ExecutarCaso ('estrutura-' + $estrutura) @('--dataset', $subset,
+            '--limite', '0', '--estrutura', $estrutura, '--saida', $csv) 0
+        $rEstrutura = (Import-Csv -LiteralPath $csv | Select-Object -Last 1)
+        Conferir ($rEstrutura.estrutura -eq $estrutura -and $rEstrutura.vertices -eq '100' -and
+            $rEstrutura.arestas -eq '2' -and $rEstrutura.registros_invalidos -eq '0' -and
+            $rEstrutura.total_cpu_ms -match '^\d+\.\d{3}$') "Modo $estrutura incorreto."
+        if ($estrutura -eq 'lista') {
+            Conferir ([long]$rEstrutura.memoria_lista_total_bytes -gt 0 -and
+                $rEstrutura.memoria_matriz_total_bytes -eq '0') 'Modo lista alocou matriz.'
+        } else {
+            Conferir ($rEstrutura.memoria_lista_total_bytes -eq '0' -and
+                [long]$rEstrutura.memoria_matriz_total_bytes -gt 0) 'Modo matriz alocou lista.'
+        }
+        Conferir ($saidaEstrutura.Contains("Estrutura: $estrutura de adjacencia")) "Terminal nao identificou $estrutura."
     }
-    Conferir (@(Import-Csv -LiteralPath $csv).Count -eq 4) 'Modo indisponivel gerou resultado experimental.'
+    Conferir (@(Import-Csv -LiteralPath $csv).Count -eq 6) 'CSV divergiu nas execucoes de representacao.'
     Conferir ((Get-FileHash -LiteralPath $dataset -Algorithm SHA256).Hash -eq $resumo.dataset_sha256) 'Dataset foi alterado.'
     $resumo['resultados'] = $linhas
     $resumo.status = 'parcial_validado'

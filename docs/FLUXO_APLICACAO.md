@@ -11,7 +11,7 @@ Na raiz do repositório:
 ```powershell
 mingw32-make
 ./build/grafo.exe --help
-./build/grafo.exe --dataset data/opencellid_brasil_filtrado.csv --limite 1000 --estrutura conjunta --saida results/execucoes.csv
+./build/grafo.exe --dataset data/opencellid_brasil_filtrado.csv --limite 1000 --estrutura lista --saida results/execucoes.csv
 ```
 
 Sem argumentos, usa o dataset versionado, limite de 1.000 vértices e salva em
@@ -45,12 +45,12 @@ relógio indisponível. Não incluem apresentação ou escrita do CSV.
 
 O CSV registra a contagem de cruzamentos calculada pela #16 e a estimativa de
 memória das estruturas com o estado `estimada_modelo_alocacoes`. A execução
-integrada segue marcada como `parcial` porque lista e matriz ainda não podem ser
-selecionadas e executadas isoladamente. O CSV é um registro básico de execução da #34, não
+integrada segue marcada como `parcial` porque a validação completa da #35 ainda
+está pendente. O CSV é um registro básico de execução da #34, não
 substitui a organização dos benchmarks e dados para gráficos das outras issues.
 
-Códigos de saída: `0` para execução parcial bem-sucedida ou ajuda, `1` para erro
-de execução/gravação e `2` para argumentos inválidos ou seleção indisponível.
+Códigos de saída: `0` para execução bem-sucedida ou ajuda, `1` para erro de
+execução/gravação e `2` para argumentos inválidos.
 
 ## Requisitos e dependências
 
@@ -58,7 +58,7 @@ de execução/gravação e `2` para argumentos inválidos ou seleção indispon�
 | --- | --- |
 | Carregar dataset | Integrado (#9) |
 | Selecionar tamanho | Integrado como limite de vértices |
-| Selecionar lista ou matriz | Pendente de API de seleção nas estruturas/operações (#7/#8/#11) |
+| Selecionar lista ou matriz | Modos exclusivos e conjunto implementados; testados em N=100 |
 | Construir grafo | Integrado (#10) |
 | Euler | Integrado (#13) |
 | Cruzamentos | Contagem integrada (#16) |
@@ -67,22 +67,20 @@ de execução/gravação e `2` para argumentos inválidos ou seleção indispon�
 | Memória | Estimativas comparáveis da lista e da matriz integradas (#19) |
 | Salvar resultados | CSV básico implementado, com campos pendentes explícitos |
 
-O grafo atual aloca **lista e matriz simultaneamente** e os algoritmos não
-recebem uma representação selecionada. Por isso, `--estrutura conjunta` é o
-único modo disponível. `--estrutura lista` e `--estrutura matriz` retornam erro
-explicativo antes de executar; não apenas trocam o rótulo das mesmas medições.
-Alinhar com os responsáveis pelas estruturas como selecionar a representação
-e encaminhar as operações/medições antes de habilitar esses modos.
+O padrão continua sendo `--estrutura conjunta` para compatibilidade. Para
+medições independentes, `--estrutura lista` aloca e consulta a lista encadeada;
+`--estrutura matriz` aloca e consulta a matriz. O campo `estrutura` no CSV
+identifica o modo realmente utilizado. Cada modo deve ser comparado com os
+mesmos arquivos de entrada e verificar se os resultados funcionais coincidem.
 
 Para memória, o terminal e o CSV mostram bytes comuns, total estimado para a
 lista e total estimado para a matriz. A estimativa soma o tamanho dos blocos
 solicitados ao alocador: estrutura do grafo, capacidades reservadas para
 vértices e arestas, vetor de cabeças e nós da lista, ou células da matriz.
 Overhead interno do alocador, fragmentação e buffers temporários dos algoritmos
-ficam de fora. Como o grafo mantém as duas representações simultaneamente, os
-totais da lista e da matriz são modelos comparativos sobre o mesmo grafo; não
-são medições de RSS nem execuções isoladas. A comparação experimental real entre
-modos depende da seleção de representação na #34.
+ficam de fora. Nos modos exclusivos, o total da representação selecionada
+corresponde aos blocos solicitados pelo grafo e o total da estrutura ausente é
+zero. No modo conjunto, ambos os totais são apresentados.
 
 Para cruzamentos, o relatório e o CSV contam pares de arestas que se cruzam na mesma
 execução analisada por Euler.
@@ -100,8 +98,8 @@ mingw32-make all test
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_fluxo_parcial.ps1
 ```
 
-O roteiro verifica o fluxo disponível com recortes do dataset real, preservação
-de execuções no CSV, dados pendentes, limites, ajuda, modo indisponível, falhas
+O roteiro verifica o fluxo com recortes do dataset real, preservação de
+execuções no CSV, campos não medidos, limites, ajuda, estruturas exclusivas, falhas
 de leitura/gravação e compatibilidade posicional. Usa arquivos isolados em
-`build/`. Não encerra a #35: ainda falta seleção entre estruturas e análise
-completa para o teste de integração de toda a Fase I.
+`build/`. Não encerra a #35: ainda falta a análise completa para o teste de
+integração de toda a Fase I.

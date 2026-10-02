@@ -10,6 +10,15 @@ static double decorrido_ms(clock_t inicio, clock_t fim)
     return (double)(fim - inicio) * 1000.0 / CLOCKS_PER_SEC;
 }
 
+static const char *nome_estrutura(EstruturaGrafo estrutura)
+{
+    switch (estrutura) {
+        case GRAFO_LISTA_ADJACENCIA: return "lista de adjacencia";
+        case GRAFO_MATRIZ_ADJACENCIA: return "matriz de adjacencia";
+        default: return "lista e matriz simultaneas (conjunta)";
+    }
+}
+
 int main(int argc, char *argv[])
 {
     OpcoesExecucao opcoes;
@@ -17,21 +26,22 @@ int main(int argc, char *argv[])
     char erro[128];
     Grafo *grafo;
     size_t quantidade_cruzamentos;
-    clock_t inicio, fim;
+    clock_t inicio, fim, inicio_total, fim_total;
     int status = execucao_ler_opcoes(argc, argv, &opcoes);
     if (status == 0) {
         execucao_exibir_ajuda();
         return 0;
     }
     if (status < 0) return 2;
-    grafo = grafo_criar();
+    inicio_total = clock();
+    grafo = grafo_criar_com_estrutura(opcoes.estrutura);
     if (grafo == NULL) {
         fputs("Erro ao criar o grafo.\n", stderr);
         return 1;
     }
     printf("Dataset: %s\nLimite de vertices: %zu (0 = todos)\n"
-           "Estruturas: lista e matriz simultaneas (modo conjunto).\n",
-           opcoes.dataset, opcoes.limite);
+           "Estrutura: %s.\n", opcoes.dataset, opcoes.limite,
+           nome_estrutura(opcoes.estrutura));
     inicio = clock();
     if (!dataset_carregar_opencellid(grafo, opcoes.dataset, opcoes.limite,
             &resultado.carregamento, erro, sizeof(erro))) {
@@ -65,12 +75,16 @@ int main(int argc, char *argv[])
     resultado.cruzamentos_ms = decorrido_ms(inicio, fim);
     resultado.memoria_disponivel = grafo_estimar_memoria(grafo, &resultado.memoria);
     grafo_destruir(grafo);
+    fim_total = clock();
+    resultado.total_cpu_ms = decorrido_ms(inicio_total, fim_total);
 
     printf("Registros invalidos ignorados: %zu\n"
            "Tempos de CPU em ms (-1 = indisponivel):\n"
-           "Leitura: %.3f\nConstrucao: %.3f\nEuler: %.3f\nCruzamentos: %.3f\n",
+           "Leitura: %.3f\nConstrucao: %.3f\nEuler: %.3f\nCruzamentos: %.3f\n"
+           "Total da execucao: %.3f\n",
            resultado.carregamento.registros_invalidos, resultado.leitura_ms,
-           resultado.construcao_ms, resultado.euler_ms, resultado.cruzamentos_ms);
+           resultado.construcao_ms, resultado.euler_ms, resultado.cruzamentos_ms,
+           resultado.total_cpu_ms);
     if (resultado.memoria_disponivel) {
         printf("Memoria estimada em bytes (modelo das alocacoes do grafo):\n"
                "Comum: %zu\nLista de adjacencia: %zu\nMatriz de adjacencia: %zu\n",
