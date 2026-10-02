@@ -16,6 +16,7 @@ int main(int argc, char *argv[])
     ResultadoExecucao resultado = {0};
     char erro[128];
     Grafo *grafo;
+    size_t quantidade_cruzamentos;
     clock_t inicio, fim;
     int status = execucao_ler_opcoes(argc, argv, &opcoes);
     if (status == 0) {
@@ -57,7 +58,9 @@ int main(int argc, char *argv[])
     fim = clock();
     resultado.euler_ms = decorrido_ms(inicio, fim);
     inicio = clock();
-    resultado.possui_cruzamentos = grafo_possui_cruzamentos(grafo);
+    quantidade_cruzamentos = grafo_detectar_cruzamentos(grafo, NULL);
+    resultado.quantidade_cruzamentos = quantidade_cruzamentos;
+    resultado.possui_cruzamentos = quantidade_cruzamentos > 0U;
     fim = clock();
     resultado.cruzamentos_ms = decorrido_ms(inicio, fim);
     grafo_destruir(grafo);
@@ -69,7 +72,8 @@ int main(int argc, char *argv[])
            resultado.construcao_ms, resultado.euler_ms, resultado.cruzamentos_ms);
     puts("Consumo de memoria: indisponivel (pendente da #19).");
     analise_planaridade_exibir(stdout, resultado.vertices, resultado.arestas,
-        resultado.euler, resultado.possui_cruzamentos, NULL);
+        resultado.euler, resultado.possui_cruzamentos,
+        &resultado.quantidade_cruzamentos);
     if (!execucao_salvar(&opcoes, &resultado)) {
         fprintf(stderr, "Erro ao salvar resultados em %s. Verifique o diretorio, "
             "as permissoes e se o arquivo possui o cabecalho esperado.\n", opcoes.saida);

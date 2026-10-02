@@ -15,6 +15,7 @@ typedef struct {
     size_t arestas;
     ResultadoEuler euler;
     int possui_cruzamentos;
+    size_t quantidade_cruzamentos;
     double leitura_ms;
     double construcao_ms;
     double euler_ms;

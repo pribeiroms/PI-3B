@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "grafo.h"
 
@@ -26,6 +27,7 @@ static void teste_cria_conexao_elegivel(void)
 static void teste_detecta_cruzamento(void)
 {
     Grafo *grafo = grafo_criar();
+    Cruzamento *cruzamentos = NULL;
     assert(grafo != NULL);
     assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
     assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 2U, 1.0, 1.0, 1.0) == 1);
@@ -34,6 +36,10 @@ static void teste_detecta_cruzamento(void)
     assert(grafo_adicionar_aresta(grafo, 0U, 1U));
     assert(grafo_adicionar_aresta(grafo, 2U, 3U));
     assert(grafo_possui_cruzamentos(grafo));
+    assert(grafo_detectar_cruzamentos(grafo, NULL) == 1U);
+    assert(grafo_detectar_cruzamentos(grafo, &cruzamentos) == 1U);
+    assert(cruzamentos != NULL);
+    free(cruzamentos);
     grafo_destruir(grafo);
 }
 

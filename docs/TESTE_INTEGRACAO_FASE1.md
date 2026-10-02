@@ -57,7 +57,9 @@ SHA-256: `5EB50BD6954466F08ECA483B2D9DA18B50C297E54710532FB7D0646B2987F8DB`.
 Nenhum registro inválido foi reportado nesses recortes. Os tempos por etapa
 foram exportados e validados como números finitos não negativos. Zero é
 permitido pela resolução do relógio; os tempos não são fixados como valores
-esperados. Quantidade de cruzamentos e memória continuam sem valor medido.
+esperados. Os resultados desta execução documentada são da base anterior à
+integração da contagem. O roteiro agora verifica a quantidade no terminal e no
+CSV; memória continua sem valor medido.
 
 Os valores acima são referências de regressão da versão atual, não uma prova
 independente da correção dos algoritmos. O roteiro verifica o hash do dataset;
@@ -74,7 +76,7 @@ sem apenas atualizar valores para esconder uma falha.
 | Matriz de Adjacência | Exercitada na estrutura conjunta; testes unitários existentes passam |
 | Alternância entre estruturas | Bloqueada; modos exclusivos retornam erro explícito e não exportam resultados |
 | Euler | Conferido com V/E e mensagem de limitação presente |
-| Cruzamentos | Presença e conclusão coerentes; contagem pendente |
+| Cruzamentos | Presença, contagem e conclusão conferidas no terminal e no CSV |
 | Tempo | Quatro etapas registradas e valores válidos |
 | Memória | Bloqueada; campo vazio com estado pendente |
 | Logs | Captura de stdout/stderr por cenário e resumo da execução |
@@ -92,8 +94,8 @@ Nenhum erro impeditivo novo da aplicação foi encontrado nos cenários disponí
    funcionais, sem exigir tempos ou memória iguais.
 2. Integrar a medição da #19; conferir unidade, escopo e coerência entre
    terminal/CSV e por estrutura.
-3. Integrar a quantidade de cruzamentos da #16 e o relatório completo da #17;
-   testar casos conhecidos com zero, um e múltiplos cruzamentos.
+3. Atualizar as evidências da #35 com a contagem integrada da #16 e o relatório
+   completo da #17; manter os casos conhecidos de cruzamentos nos testes.
 4. Executar novamente a aplicação completa, corrigir erros impeditivos e
    registrar novas evidências antes de fechar a #35.
 

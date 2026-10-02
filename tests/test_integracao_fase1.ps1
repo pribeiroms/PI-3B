@@ -21,7 +21,7 @@ $resumo = [ordered]@{
     pendencias = @(
         'Lista e matriz em execucoes independentes e alternancia: depende da #34 e da API das estruturas.',
         'Medicao real de memoria: depende da #19 integrada na #34.',
-        'Quantidade de cruzamentos: depende da #16 e da conclusao da #17 integradas na #34.'
+        'Revisar os resultados completos da #17 apos a integracao na #34.'
     )
 }
 
@@ -80,7 +80,10 @@ try {
         $mensagem = if ($r.possui_cruzamentos -eq '1') { 'Foram detectados cruzamentos' } else { 'detector atual nao encontrou cruzamentos' }
         Conferir ($saida.Contains($mensagem)) 'Conclusao diverge da deteccao exportada.'
         Conferir ($saida.Contains('nao constitui um teste completo de planaridade')) 'Limitacao de Euler ausente.'
-        Conferir ($r.quantidade_cruzamentos -eq '' -and $r.status_cruzamentos -eq 'pendente_16' -and
+        $quantidadeEsperada = if ($limite -eq 1000) { '1' } else { '0' }
+        Conferir ($r.quantidade_cruzamentos -eq $quantidadeEsperada -and
+            $r.status_cruzamentos -eq 'calculado' -and
+            $saida.Contains("Quantidade de cruzamentos: $quantidadeEsperada`r`n") -and
             $r.memoria_bytes -eq '' -and $r.status_memoria -eq 'pendente_19' -and
             $r.status_analise -eq 'parcial') 'Pendencias foram apresentadas como resultados completos.'
         foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms', 'cruzamentos_cpu_ms')) {
@@ -91,7 +94,8 @@ try {
         Conferir ((Get-Item (Join-Path $pasta ($nome + '.stderr.log'))).Length -eq 0) 'Erro inesperado na execucao.'
     }
     $linhas = @(Import-Csv -LiteralPath $csv)
-    foreach ($campo in @('vertices', 'arestas', 'registros_invalidos', 'euler', 'possui_cruzamentos')) {
+    foreach ($campo in @('vertices', 'arestas', 'registros_invalidos', 'euler',
+        'possui_cruzamentos', 'quantidade_cruzamentos')) {
         Conferir ($linhas[2].$campo -eq $linhas[3].$campo) "Repeticao produziu resultado diferente: $campo."
     }
     foreach ($estrutura in @('lista', 'matriz')) {

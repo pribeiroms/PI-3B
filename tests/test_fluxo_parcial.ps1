@@ -30,11 +30,11 @@ try {
     }
     foreach ($linha in $linhas) {
         if ($linha.estrutura -ne 'conjunta' -or $linha.memoria_bytes -ne '' -or
-            $linha.quantidade_cruzamentos -ne '' -or $linha.status_analise -ne 'parcial') {
-            throw 'CSV atribuiu valores a resultados ainda indisponiveis.'
+            $linha.quantidade_cruzamentos -ne '0' -or $linha.status_analise -ne 'parcial') {
+            throw 'CSV divergiu dos resultados de cruzamentos ou memoria.'
         }
         if ($linha.dataset -ne $real -or $linha.euler -ne 'inconclusivo' -or
-            $linha.status_memoria -ne 'pendente_19' -or $linha.status_cruzamentos -ne 'pendente_16') {
+            $linha.status_memoria -ne 'pendente_19' -or $linha.status_cruzamentos -ne 'calculado') {
             throw 'Metadados incorretos no CSV.'
         }
         foreach ($campo in @('leitura_cpu_ms', 'construcao_cpu_ms', 'euler_cpu_ms', 'cruzamentos_cpu_ms')) {

@@ -1,7 +1,7 @@
 # Fluxo da aplicação — #34 (parcial)
 
 O executável integra os componentes atualmente disponíveis, reutilizando
-dataset, construção do grafo, Euler, detecção de presença de cruzamentos,
+dataset, construção do grafo, Euler, contagem de cruzamentos,
 medições por etapa e relatório da #17. Não reimplementa os algoritmos dos colegas.
 
 ## Executar
@@ -27,7 +27,7 @@ texto, excesso numérico e opções repetidas são rejeitados.
 ## Resultados e medições
 
 A saída apresenta parâmetros, registros inválidos ignorados, tempos por etapa,
-vértices, arestas, Euler, presença de cruzamentos e conclusão da #17.
+vértices, arestas, Euler, quantidade de cruzamentos e conclusão da #17.
 
 O CSV acrescenta uma linha por execução, com data UTC, caminho do dataset,
 limite solicitado, modo efetivamente usado, resultados e tempos. O cabeçalho é
@@ -43,9 +43,9 @@ não devem ser tratadas como benchmarks independentes de lista versus matriz.
 Zero pode representar uma etapa abaixo da resolução do relógio; `-1` indica
 relógio indisponível. Não incluem apresentação ou escrita do CSV.
 
-Contagem de cruzamentos e memória ficam vazias no CSV, acompanhadas dos estados
-`pendente_16` e `pendente_19`, em vez de valores zero fictícios. A análise é
-marcada como `parcial`. O CSV é um registro básico de execução da #34, não
+O CSV registra a contagem de cruzamentos calculada pela #16. Memória continua
+vazia com o estado `pendente_19`; por isso a execução integrada segue marcada
+como `parcial`. O CSV é um registro básico de execução da #34, não
 substitui a organização dos benchmarks e dados para gráficos das outras issues.
 
 Códigos de saída: `0` para execução parcial bem-sucedida ou ajuda, `1` para erro
@@ -60,8 +60,8 @@ de execução/gravação e `2` para argumentos inválidos ou seleção indispon�
 | Selecionar lista ou matriz | Pendente de API de seleção nas estruturas/operações (#7/#8/#11) |
 | Construir grafo | Integrado (#10) |
 | Euler | Integrado (#13) |
-| Cruzamentos | Presença integrada; contagem depende da #16 e da conclusão da #17 |
-| Apresentar resultados | Relatório parcial da #17 integrado |
+| Cruzamentos | Contagem integrada (#16) |
+| Apresentar resultados | Relatório completo da #17 integrado |
 | Tempo | Medições disponíveis da #18 integradas |
 | Memória | Pendente de API da #19 |
 | Salvar resultados | CSV básico implementado, com campos pendentes explícitos |
@@ -75,8 +75,8 @@ e encaminhar as operações/medições antes de habilitar esses modos.
 
 Para memória, combinar a unidade e o significado da medição (estrutura, processo
 ou pico) com o responsável pela #19 antes de preencher `memoria_bytes`. Para
-cruzamentos, alinhar a unidade de contagem e integrar o retorno da #16 ao
-relatório e ao CSV na mesma execução.
+cruzamentos, o relatório e o CSV contam pares de arestas que se cruzam na mesma
+execução analisada por Euler.
 
 A API de construção existente retorna zero tanto para ausência de arestas como
 para algumas falhas de alocação; a leitura também não distingue todos os erros

@@ -21,8 +21,7 @@ void analise_planaridade_exibir(FILE *saida, size_t vertices, size_t arestas,
         fprintf(saida, "Quantidade de cruzamentos: %zu\n", *quantidade_cruzamentos);
         possui_cruzamentos = *quantidade_cruzamentos > 0U;
     } else {
-        fputs("Quantidade de cruzamentos: indisponivel (pendente da #16).\n", saida);
-        fputs("Status: consolidacao parcial; contagem ainda nao integrada.\n", saida);
+        fputs("Quantidade de cruzamentos: indisponivel.\n", saida);
     }
     fputs("Conclusao: ", saida);
     if (euler == EULER_NAO_PLANAR) {

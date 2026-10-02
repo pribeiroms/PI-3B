@@ -59,7 +59,7 @@ gcc -std=c11 -Wall -Wextra -Wpedantic -Iinclude src/main.c src/grafo.c src/datas
 ./grafo.exe
 ```
 
-O relatório parcial da issue #17 e suas dependências estão em
+O relatório consolidado da issue #17 e suas dependências estão em
 [docs/ANALISE_PLANARIDADE.md](docs/ANALISE_PLANARIDADE.md).
 
 O fluxo parcial da #34 aceita opções e salva resultados em CSV:

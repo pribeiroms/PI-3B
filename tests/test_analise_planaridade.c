@@ -20,11 +20,7 @@ static void verificar(ResultadoEuler euler, int possui, const size_t *quantidade
     assert(strstr(texto, contagem) != NULL);
     assert(strstr(texto, conclusao) != NULL);
     assert(strstr(texto, "nao constitui um teste completo de planaridade") != NULL);
-    if (quantidade == NULL) {
-        assert(strstr(texto, "consolidacao parcial") != NULL);
-        assert(strstr(texto, "Quantidade de cruzamentos: 0") == NULL);
-        assert(strstr(texto, "Quantidade de cruzamentos: 1") == NULL);
-    }
+    assert(strstr(texto, "consolidacao parcial") == NULL);
     fclose(saida);
     assert(remove("build/test_relatorio_planaridade.tmp") == 0);
 }
@@ -32,10 +28,10 @@ static void verificar(ResultadoEuler euler, int possui, const size_t *quantidade
 int main(void)
 {
     size_t zero = 0U, tres = 3U;
-    verificar(EULER_INCONCLUSIVO, 1, NULL, "planaridade inconclusiva",
-        "pendente da #16", "avaliar isolamento ou alteracao das rotas");
-    verificar(EULER_INCONCLUSIVO, 0, NULL, "planaridade inconclusiva",
-        "pendente da #16", "detector atual nao encontrou");
+    verificar(EULER_INCONCLUSIVO, 1, &tres, "planaridade inconclusiva",
+        "Quantidade de cruzamentos: 3", "avaliar isolamento ou alteracao das rotas");
+    verificar(EULER_INCONCLUSIVO, 0, &zero, "planaridade inconclusiva",
+        "Quantidade de cruzamentos: 0", "detector atual nao encontrou");
     verificar(EULER_NAO_PLANAR, 1, &tres, "nao atendida",
         "Quantidade de cruzamentos: 3", "rede nao admite uma representacao plana");
     verificar(EULER_NAO_APLICAVEL, 0, &zero, "nao aplicavel",

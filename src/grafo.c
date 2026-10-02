@@ -320,7 +320,7 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
     return EULER_INCONCLUSIVO;
     }
 
-    const char *grafo_mensagem_euler(ResultadoEuler resultado)
+const char *grafo_mensagem_euler(ResultadoEuler resultado)
     {
      switch(resultado){
       case EULER_NAO_APLICAVEL:
@@ -333,3 +333,79 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
 
     return "";
     }
+
+static double orientacao_coordenadas(CoordenadaGeografica a, CoordenadaGeografica b,
+    CoordenadaGeografica c)
+{
+    return (b.longitude - a.longitude) * (c.latitude - a.latitude) -
+        (b.latitude - a.latitude) * (c.longitude - a.longitude);
+}
+
+static int ponto_no_segmento(CoordenadaGeografica p, CoordenadaGeografica q,
+    CoordenadaGeografica r)
+{
+    double min_lon = p.longitude < r.longitude ? p.longitude : r.longitude;
+    double max_lon = p.longitude > r.longitude ? p.longitude : r.longitude;
+    double min_lat = p.latitude < r.latitude ? p.latitude : r.latitude;
+    double max_lat = p.latitude > r.latitude ? p.latitude : r.latitude;
+    return q.longitude >= min_lon && q.longitude <= max_lon &&
+        q.latitude >= min_lat && q.latitude <= max_lat;
+}
+
+static int segmentos_se_cruzam(Segmento a, Segmento b)
+{
+    double o1 = orientacao_coordenadas(a.inicio, a.fim, b.inicio);
+    double o2 = orientacao_coordenadas(a.inicio, a.fim, b.fim);
+    double o3 = orientacao_coordenadas(b.inicio, b.fim, a.inicio);
+    double o4 = orientacao_coordenadas(b.inicio, b.fim, a.fim);
+    if (((o1 > 0.0 && o2 < 0.0) || (o1 < 0.0 && o2 > 0.0)) &&
+        ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0))) return 1;
+    if (o1 == 0.0 && ponto_no_segmento(a.inicio, b.inicio, a.fim)) return 1;
+    if (o2 == 0.0 && ponto_no_segmento(a.inicio, b.fim, a.fim)) return 1;
+    if (o3 == 0.0 && ponto_no_segmento(b.inicio, a.inicio, b.fim)) return 1;
+    if (o4 == 0.0 && ponto_no_segmento(b.inicio, a.fim, b.fim)) return 1;
+    return 0;
+}
+
+size_t grafo_detectar_cruzamentos(const Grafo *grafo, Cruzamento **cruzamentos)
+{
+    size_t capacidade = 0U, quantidade = 0U, i, j;
+    Cruzamento *encontrados = NULL;
+    if (cruzamentos != NULL) *cruzamentos = NULL;
+    if (grafo == NULL) return 0U;
+    for (i = 0U; i < grafo->quantidade_arestas; ++i) {
+        Aresta a = grafo->arestas[i];
+        Segmento sa = {grafo->vertices[a.origem].coordenadas,
+            grafo->vertices[a.destino].coordenadas};
+        for (j = i + 1U; j < grafo->quantidade_arestas; ++j) {
+            Aresta b = grafo->arestas[j];
+            Segmento sb;
+            Cruzamento *realocado;
+            if (a.origem == b.origem || a.origem == b.destino ||
+                a.destino == b.origem || a.destino == b.destino) continue;
+            sb.inicio = grafo->vertices[b.origem].coordenadas;
+            sb.fim = grafo->vertices[b.destino].coordenadas;
+            if (!segmentos_se_cruzam(sa, sb)) continue;
+            if (cruzamentos == NULL) {
+                ++quantidade;
+                continue;
+            }
+            if (quantidade == capacidade) {
+                size_t nova_capacidade = capacidade == 0U ? 8U : capacidade * 2U;
+                realocado = realloc(encontrados, nova_capacidade * sizeof(*realocado));
+                if (realocado == NULL) {
+                    free(encontrados);
+                    return 0U;
+                }
+                encontrados = realocado;
+                capacidade = nova_capacidade;
+            }
+            encontrados[quantidade].aresta_a = i;
+            encontrados[quantidade].aresta_b = j;
+            ++quantidade;
+        }
+    }
+    if (cruzamentos != NULL) *cruzamentos = encontrados;
+    else free(encontrados);
+    return quantidade;
+}

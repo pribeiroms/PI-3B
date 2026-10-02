@@ -5,7 +5,7 @@
 #include "grafo.h"
 
 /* Consolida resultados ja calculados, sem executar os algoritmos novamente.
- * quantidade_cruzamentos == NULL indica contagem ainda indisponivel (#16).
+ * quantidade_cruzamentos == NULL indica contagem indisponivel.
  * Quando fornecida, a contagem prevalece sobre possui_cruzamentos e deve
  * corresponder ao mesmo grafo e a mesma execucao da analise de Euler.
  */

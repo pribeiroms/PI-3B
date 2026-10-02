@@ -42,6 +42,16 @@ typedef struct {
 	size_t ordem;
 } MatrizAdjacencia;
 
+typedef struct {
+	CoordenadaGeografica inicio;
+	CoordenadaGeografica fim;
+} Segmento;
+
+typedef struct {
+	size_t aresta_a;
+	size_t aresta_b;
+} Cruzamento;
+
 /* Cria um grafo vazio. Retorna NULL caso a alocação falhe. */
 Grafo *grafo_criar(void);
 
@@ -89,5 +99,8 @@ ResultadoEuler grafo_verificar_euler( const Grafo *grafo);
 
 /*Retorna um texto explicativo do resultado, para exibir ao usuario*/
 const char *grafo_mensagem_euler(ResultadoEuler resultado);
+
+/* Conta cruzamentos entre arestas sem vertice em comum. */
+size_t grafo_detectar_cruzamentos(const Grafo *grafo, Cruzamento **cruzamentos);
 
 #endif

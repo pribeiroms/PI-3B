@@ -130,10 +130,11 @@ int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
     escrever_campo(arquivo, data);
     fputc(',', arquivo);
     escrever_campo(arquivo, opcoes->dataset);
-    fprintf(arquivo, ",%zu,conjunta,%zu,%zu,%zu,%s,%d,,pendente_16,,pendente_19,"
+    fprintf(arquivo, ",%zu,conjunta,%zu,%zu,%zu,%s,%d,%zu,calculado,,pendente_19,"
         "%.3f,%.3f,%.3f,%.3f,parcial\n", opcoes->limite, r->vertices, r->arestas,
         r->carregamento.registros_invalidos, nome_euler(r->euler),
-        r->possui_cruzamentos, r->leitura_ms, r->construcao_ms, r->euler_ms,
+        r->possui_cruzamentos, r->quantidade_cruzamentos, r->leitura_ms,
+        r->construcao_ms, r->euler_ms,
         r->cruzamentos_ms);
     ok = !ferror(arquivo);
     if (fclose(arquivo) != 0) ok = 0;

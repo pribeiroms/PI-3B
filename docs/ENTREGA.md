@@ -16,9 +16,10 @@
 
 ## Estado da entrega
 
-**Ainda não liberada.** A revisão parcial da #36 está em
-[REVISAO_FASE1.md](REVISAO_FASE1.md). As #17, #34 e #35 possuem entregas parciais;
-os testes disponíveis não substituem o fechamento de suas pendências.
+**Ainda não liberada.** A análise da #17 foi consolidada nesta branch com a
+contagem real da #16. A revisão parcial da #36 está em
+[REVISAO_FASE1.md](REVISAO_FASE1.md); a integração mais ampla da #34 e a
+validação completa da #35 continuam pendentes.
 
 ## Documentos para conferência
 
