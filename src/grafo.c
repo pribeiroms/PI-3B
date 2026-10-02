@@ -43,7 +43,7 @@ static int expandir_adjacencia(Grafo *grafo)
     size_t antiga_ordem = grafo->matriz_adjacencia.ordem;
     size_t nova_ordem = antiga_ordem == 0U ? 128U : antiga_ordem * 2U;
     NoAdjacencia **listas = realloc(grafo->lista_adjacencia.listas,
-                                   nova_ordem * sizeof(*listas));
+        nova_ordem * sizeof(*listas));
     unsigned char *dados;
     size_t linha;
 
@@ -55,8 +55,8 @@ static int expandir_adjacencia(Grafo *grafo)
     }
     for (linha = 0U; linha < antiga_ordem; ++linha) {
         memcpy(&dados[linha * nova_ordem],
-               &grafo->matriz_adjacencia.dados[linha * antiga_ordem],
-               antiga_ordem * sizeof(*dados));
+            &grafo->matriz_adjacencia.dados[linha * antiga_ordem],
+            antiga_ordem * sizeof(*dados));
     }
     for (linha = antiga_ordem; linha < nova_ordem; ++linha) listas[linha] = NULL;
     free(grafo->matriz_adjacencia.dados);
@@ -113,8 +113,8 @@ int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice)
 }
 
 int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
-                           unsigned int area, unsigned int cell, double latitude,
-                           double longitude, double alcance_metros)
+    unsigned int area, unsigned int cell, double latitude,
+    double longitude, double alcance_metros)
 {
     Vertice vertice = {0U, mcc, net, area, cell, {latitude, longitude}, alcance_metros};
     return grafo_adicionar_vertice(grafo, vertice);
@@ -152,7 +152,7 @@ int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
 }
 
 size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
-                          char *erro, size_t tamanho_erro)
+    char *erro, size_t tamanho_erro)
 {
     char linha[256], radio[16];
     FILE *arquivo;
@@ -174,11 +174,11 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
         return 0U;
     }
     while ((max_antenas == 0U || carregadas < max_antenas) &&
-           fgets(linha, sizeof(linha), arquivo) != NULL) {
+        fgets(linha, sizeof(linha), arquivo) != NULL) {
         unsigned int mcc, net, area, cell, amostras;
         double latitude, longitude, alcance;
         if (sscanf(linha, "%15[^,],%u,%u,%u,%u,%lf,%lf,%lf,%u", radio, &mcc, &net, &area,
-                   &cell, &latitude, &longitude, &alcance, &amostras) == 9 &&
+            &cell, &latitude, &longitude, &alcance, &amostras) == 9 &&
             grafo_adicionar_antena(grafo, mcc, net, area, cell, latitude, longitude, alcance) >= 0)
             ++carregadas;
     }
@@ -195,7 +195,7 @@ static double distancia_metros(const Vertice *a, const Vertice *b)
     double seno_lat = sin(dlat / 2.0);
     double seno_lon = sin(dlon / 2.0);
     double x = seno_lat * seno_lat + cos(a->coordenadas.latitude * radianos) *
-               cos(b->coordenadas.latitude * radianos) * seno_lon * seno_lon;
+        cos(b->coordenadas.latitude * radianos) * seno_lon * seno_lon;
     return raio_terra * 2.0 * atan2(sqrt(x), sqrt(1.0 - x));
 }
 
@@ -211,7 +211,7 @@ size_t grafo_construir_conexoes(Grafo *grafo)
         grafo->lista_adjacencia.listas[i] = NULL;
     }
     memset(grafo->matriz_adjacencia.dados, 0,
-           grafo->matriz_adjacencia.ordem * grafo->matriz_adjacencia.ordem);
+        grafo->matriz_adjacencia.ordem * grafo->matriz_adjacencia.ordem);
     grafo->quantidade_arestas = 0U;
     proxima = malloc(grafo->quantidade_vertices * sizeof(*proxima));
     menor = malloc(grafo->quantidade_vertices * sizeof(*menor));
@@ -291,16 +291,15 @@ int grafo_arestas_compartilham_vertice(const Grafo *grafo, size_t aresta_a, size
     a = grafo->arestas[aresta_a];
     b = grafo->arestas[aresta_b];
     return a.origem == b.origem || a.origem == b.destino ||
-           a.destino == b.origem || a.destino == b.destino;
+        a.destino == b.origem || a.destino == b.destino;
 }
-
 
 static double orientacao(const Vertice *a, const Vertice *b, const Vertice *c)
 {
     return (b->coordenadas.longitude - a->coordenadas.longitude) *
-           (c->coordenadas.latitude - a->coordenadas.latitude) -
-           (b->coordenadas.latitude - a->coordenadas.latitude) *
-           (c->coordenadas.longitude - a->coordenadas.longitude);
+        (c->coordenadas.latitude - a->coordenadas.latitude) -
+        (b->coordenadas.latitude - a->coordenadas.latitude) *
+        (c->coordenadas.longitude - a->coordenadas.longitude);
 }
 
 int grafo_possui_cruzamentos(const Grafo *grafo)
@@ -323,12 +322,12 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
                 ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0))) return 1;
         }
     }
-   return 0;
-  }
+    return 0;
+}
 
-  ResultadoEuler grafo_verificar_euler( const Grafo *grafo)
-    {
-      size_t v, e;
+ResultadoEuler grafo_verificar_euler( const Grafo *grafo)
+{
+    size_t v, e;
 
     if (grafo == NULL) return EULER_NAO_APLICAVEL;
     v = grafo->quantidade_vertices;
@@ -343,20 +342,60 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
 
     /* Satisfeita, mas Euler sozinho NAO garante planaridade (ex.: K3,3). */
     return EULER_INCONCLUSIVO;
-    }
+}
 
-    const char *grafo_mensagem_euler(ResultadoEuler resultado)
-    {
-     switch(resultado){
-      case EULER_NAO_APLICAVEL:
-          return "A validacao de Euler nao se apliica";
-      case EULER_NAO_PLANAR:
-          return "A validacao de Euler concluir que o grafo NAO e planar"; 
-      case EULER_INCONCLUSIVO:
-          return "A validacao de Euler foi aceita, mas e analise baseada apenas "
-                 "em Euler nao e suficiente para garantir que o grafo seja planar."
-          ;
-     }
+const char *grafo_mensagem_euler(ResultadoEuler resultado)
+{
+    switch(resultado){
+    case EULER_NAO_APLICAVEL:
+        return "A validacao de Euler nao se apliica";
+    case EULER_NAO_PLANAR:
+        return "A validacao de Euler concluir que o grafo NAO e planar";
+    case EULER_INCONCLUSIVO:
+        return "A validacao de Euler foi aceita, mas e analise baseada apenas "
+            "em Euler nao e suficiente para garantir que o grafo seja planar."
+        ;
+    }
 
     return "";
-    }
+}
+
+static double orientacao_coordenadas(CoordenadaGeografica a, CoordenadaGeografica b,
+    CoordenadaGeografica c)
+{
+    return (b.longitude - a.longitude) * (c.latitude - a.latitude) -
+        (b.latitude - a.latitude) * (c.longitude - a.longitude);
+}
+
+static int ponto_no_segmento(CoordenadaGeografica p, CoordenadaGeografica q,
+    CoordenadaGeografica r)
+{
+    double min_lon = p.longitude < r.longitude ? p.longitude : r.longitude;
+    double max_lon = p.longitude > r.longitude ? p.longitude : r.longitude;
+    double min_lat = p.latitude < r.latitude ? p.latitude : r.latitude;
+    double max_lat = p.latitude > r.latitude ? p.latitude : r.latitude;
+
+    return q.longitude >= min_lon && q.longitude <= max_lon &&
+        q.latitude >= min_lat && q.latitude <= max_lat;
+}
+
+int grafo_segmentos_se_cruzam(Segmento a, Segmento b)
+{
+    double o1 = orientacao_coordenadas(a.inicio, a.fim, b.inicio);
+    double o2 = orientacao_coordenadas(a.inicio, a.fim, b.fim);
+    double o3 = orientacao_coordenadas(b.inicio, b.fim, a.inicio);
+    double o4 = orientacao_coordenadas(b.inicio, b.fim, a.fim);
+
+    /* Caso geral: os pontos de cada segmento ficam em lados opostos do outro. */
+    if (((o1 > 0.0 && o2 < 0.0) || (o1 < 0.0 && o2 > 0.0)) &&
+        ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0)))
+        return 1;
+
+    /* Casos especiais: pontos colineares que caem dentro do outro segmento. */
+    if (o1 == 0.0 && ponto_no_segmento(a.inicio, b.inicio, a.fim)) return 1;
+    if (o2 == 0.0 && ponto_no_segmento(a.inicio, b.fim, a.fim)) return 1;
+    if (o3 == 0.0 && ponto_no_segmento(b.inicio, a.inicio, b.fim)) return 1;
+    if (o4 == 0.0 && ponto_no_segmento(b.inicio, a.fim, b.fim)) return 1;
+
+    return 0;
+}
