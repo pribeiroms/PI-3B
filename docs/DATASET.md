@@ -60,3 +60,4 @@ podem ser aplicados durante a leitura, preservando o arquivo original sem ediç�
 
 A regra de formação das arestas sem peso e a verificação de cruzamentos da Fase I
 estão especificadas em [MODELAGEM_GRAFO.md](MODELAGEM_GRAFO.md).
+ 

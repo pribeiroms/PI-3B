@@ -352,7 +352,7 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
     {
      switch(resultado){
       case EULER_NAO_APLICAVEL:
-          return "A validacao de Euler nao se apliica";
+          return "A validacao de Euler nao se aplica";
       case EULER_NAO_PLANAR:
           return "A validacao de Euler concluir que o grafo NAO e planar"; 
       case EULER_INCONCLUSIVO:
