@@ -64,3 +64,4 @@ acima foram conferidas no arquivo versionado. SHA-256:
 
 A regra de formação das arestas sem peso e a verificação de cruzamentos da Fase I
 estão especificadas em [MODELAGEM_GRAFO.md](MODELAGEM_GRAFO.md).
+ 
