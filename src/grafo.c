@@ -425,7 +425,7 @@ const char *grafo_mensagem_euler(ResultadoEuler resultado)
     {
      switch(resultado){
       case EULER_NAO_APLICAVEL:
-          return "A validacao de Euler nao se apliica";
+          return "A validacao de Euler nao se aplica";
       case EULER_NAO_PLANAR:
           return "A validacao de Euler concluir que não e planar"; 
       case EULER_INCONCLUSIVO:
