@@ -87,6 +87,31 @@ static void teste_representacoes_exclusivas(void)
     grafo_destruir(matriz);
 }
 
+static void teste_matriz_compacta_expande_e_preserva_arestas(void)
+{
+    Grafo *matriz = grafo_criar_com_estrutura(GRAFO_MATRIZ_ADJACENCIA);
+    EstimativaMemoriaGrafo memoria;
+    size_t i;
+    assert(matriz != NULL);
+    for (i = 0U; i < 128U; ++i)
+        assert(grafo_adicionar_antena(matriz, 1U, 1U, 1U, (unsigned int)i,
+            0.0, 0.0, 1.0) == (int)i);
+    assert(grafo_adicionar_aresta(matriz, 7U, 9U));
+    assert(grafo_adicionar_antena(matriz, 1U, 1U, 1U, 128U,
+        0.0, 0.0, 1.0) == 128);
+    assert(grafo_sao_adjacentes(matriz, 7U, 9U));
+    assert(grafo_sao_adjacentes(matriz, 9U, 7U));
+    assert(grafo_adicionar_aresta(matriz, 8U, 65U));
+    assert(grafo_adicionar_aresta(matriz, 127U, 128U));
+    assert(grafo_sao_adjacentes(matriz, 8U, 65U));
+    assert(grafo_sao_adjacentes(matriz, 65U, 8U));
+    assert(grafo_sao_adjacentes(matriz, 127U, 128U));
+    assert(grafo_sao_adjacentes(matriz, 128U, 127U));
+    assert(grafo_estimar_memoria(matriz, &memoria));
+    assert(memoria.memoria_matriz_total_bytes - memoria.memoria_comum_bytes == 8192U);
+    grafo_destruir(matriz);
+}
+
 static void teste_representacoes_do_grafo(void)
 {
     Grafo *grafo = grafo_criar();
@@ -427,6 +452,7 @@ int main(void)
 {
     teste_estimativa_memoria();
     teste_representacoes_exclusivas();
+    teste_matriz_compacta_expande_e_preserva_arestas();
     teste_cria_e_destroi_grafo();
     teste_cria_conexao_elegivel();
     teste_detecta_cruzamento();

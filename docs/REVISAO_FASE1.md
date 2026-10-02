@@ -1,84 +1,90 @@
-# Revisão do repositório — #36 (parcial)
+# Revisão do repositório — issue #36
 
-**Situação: não liberado para entrega final.** Revisão realizada em 01/10/2026
-na `feature/paula-dev`, com base no commit `f6fa594`. Não houve merge em `main`,
-fechamento de issues ou aprovação de PRs nesta revisão.
+**Auditoria atualizada em 02/10/2026. A entrega final ainda não está liberada.**
+A branch de trabalho passou na integração completa #35, mas essa alteração não
+está em `main`; a validação reproduzível de `main`, a revisão por outro
+integrante e os itens experimentais/editoriais pendentes impedem declarar uma
+versão final estável.
 
-## Verificações realizadas
+## Código e validação
 
-| Item da #36 | Resultado e limite |
+| Verificação | Resultado |
 | --- | --- |
-| Compilação | Cópia local independente do commit `f6fa594`, sem binários anteriores, compilada com C11 e `-Wall -Wextra -Wpedantic -Werror` |
-| Funcionamento | Testes unitários, fluxo parcial e integração disponível passaram nessa cópia |
-| Organização | Módulos em `src/` e `include/`, testes em `tests/`, documentos em `docs/`, dataset em `data/` |
-| Commits | `bcd6128`, `060c64f` e `f6fa594` referenciam #17, #34 e #35 sem palavras de fechamento |
-| Pull Requests | Aprovações e destino efetivo ainda precisam ser confirmados no GitHub; histórico de merges não comprova revisão dos commits atuais |
-| Branches | Referências locais mostram `feature/dev` como integração; discrepância com `develop` registrada em `CONTRIBUTING.md` |
-| README | Corrigidos texto de base inicial, próximos passos já executados e pré-requisitos; estado parcial explícito |
-| Dataset | Arquivo versionado: 62.604 registros; contagens por tecnologia e hash conferidos |
-| Resultados experimentais | Registros dos recortes reais reproduzidos pela #35; não são benchmarks finais de lista versus matriz |
-| Documentação | Índice de entrega e dependências consolidados; documentação completa dos algoritmos ainda requer revisão da entrega do responsável |
-| Artigo | Nenhum arquivo de artigo identificado no inventário versionado da branch; solicitar fonte/documento e conteúdo para revisão |
-| Issues pendentes | Dependências conhecidas registradas abaixo; lista atual completa e responsáveis precisam de confirmação no GitHub |
-| Versão principal | `origin/main` local aponta para `50396ee`; não contém os três commits parciais acima. A estabilidade da versão final de `main` ainda não foi validada |
+| Código e organização | Módulos C em `src/` e `include/`, testes em `tests/`, dataset em `data/` e guias em `docs/`. |
+| Dataset | `data/opencellid_brasil_filtrado.csv` versionado; hash, registros válidos/inválidos e contagens da execução integral estão em [TESTE_INTEGRACAO_FASE1.md](TESTE_INTEGRACAO_FASE1.md). |
+| Binários/resultados | `build/` e saídas de `results/` são ignorados; apenas `.gitkeep` está versionado em `results/`. |
+| Branch `feature/paula-dev` | `c5d4368`; a integração completa #35 passou localmente em 02/10 com `mingw32-make test-integracao`, no dataset inteiro e nos modos lista e matriz. A revisão #35 é local até ser integrada. |
+| Branch `main` | `128e69f` (merge do PR #56). A compilação C11 com `-Wall -Wextra -Wpedantic -Werror` passou e `grafo.exe --help` saiu com código 0. `mingw32-make all test` passou os dois primeiros testes, mas o Windows bloqueou `test_conexoes_geograficas.exe` por política de segurança (código 4551); portanto, a suíte completa da `main` não foi validada nesta máquina. |
+| Integração na `main` | A árvore da `main` ainda tem o relatório parcial da #35 e documentação que declara a validação completa pendente. Não há evidência da execução integral nessa branch. |
 
-As referências remotas acima são o retrato local consultado, não uma auditoria
-atualizada dos estados de PRs e issues no servidor. A consulta web disponível
-não permitiu confirmar os PRs atuais e mostrou dados de issues em cache;
-por isso não é usada para declarar aprovações ou fechamentos.
+O registro da execução completa de #35 mostra 61.933 vértices, 38.131 arestas
+e 10.211 cruzamentos iguais para lista e matriz. A descrição dos resultados,
+memória, tempos e limites está em [TESTE_INTEGRACAO_FASE1.md](TESTE_INTEGRACAO_FASE1.md).
+Essa validação funcional não é benchmark controlado nem prova matemática
+completa dos algoritmos.
 
-## Reprodutibilidade conferida
+## Commits, branches e Pull Requests
 
-Foi criado um clone local independente, sem hardlinks, da `feature/paula-dev`
-em uma pasta nova de `build/`. Nesse clone foram executados:
+Consulta à API pública do GitHub e referências remotas feita em 02/10/2026:
 
-```powershell
-mingw32-make all test-integracao
-```
+- O PR #56 (`feature/paula-dev` → `main`) foi integrado em 02/10 pelo autor,
+  sem registros de revisão formal. O PR tem 39 arquivos e seu `head` é
+  `0abf6f4` (#34); ele não inclui o commit posterior `012ec1f` que valida a #35
+  nem este relatório atualizado.
+- Não havia PR aberto na consulta. A branch atual `feature/paula-dev` está em
+  `c5d4368`; `main` está em `128e69f`. O PR #56 integrou o fluxo #34, mas o
+  commit da validação completa #35 não está em `main`.
+- A comparação local do estado atualizado mostra a branch de trabalho com dois
+  commits após a base comum e a `main` com um commit após essa base. É necessário
+  abrir/revisar um PR para integrar #35 e as atualizações deste documento.
+- `CONTRIBUTING.md` exige revisão de outro integrante. A integração do PR #56
+  sem registro de revisão não atende esse controle e deve ser revisada pela
+  equipe.
 
-Resultado: compilação sem avisos com MinGW GCC 6.3.0, cinco executáveis de testes
-unitários aprovados, roteiro da #34 aprovado e validação parcial da #35 aprovada.
-A validação de integração usa 1, 100 e 1.000 registros reais, com repetição de
-1.000. Não processa todo o dataset, não certifica alternância entre estruturas
-e não mede memória. O procedimento valida os arquivos versionados da branch,
-mas não substitui um clone do remoto e teste do commit final de `main`.
+## Issues e materiais de entrega
 
-Os logs e CSVs foram gerados no diretório `results/integracao-<id>/` dessa cópia,
-com parâmetros, hashes e metadados de reprodução. Apenas `results/.gitkeep`
-está versionado em `results/`; não foram encontrados executáveis, objetos ou
-logs versionados. As saídas temporárias permanecem ignoradas pelo Git.
+Estados consultados no GitHub em 02/10/2026:
 
-## Correções documentais desta revisão
+| Issue | Estado remoto | Evidência local / observação |
+| --- | --- | --- |
+| #24 benchmark da matriz | Fechada | Não há CSV/script de benchmark da matriz no inventário versionado desta branch. Confirmar onde ficou a evidência do fechamento. |
+| #25 comparação lista/matriz | Fechada | Não foi encontrado relatório comparativo próprio nos arquivos versionados. |
+| #26 crescimento assintótico | Aberta | Entrega de análise experimental pendente. |
+| #27 dados para gráficos | Aberta | Dados/gráficos finais pendentes. |
+| #29 documentação do README | Aberta | README existe; confirmar se a issue foi revisada/encerrada pela equipe. |
+| #31 documentação dos algoritmos | Aberta | Documentação completa ainda não identificada. |
+| #32 metodologia do artigo | Aberta | Nenhum arquivo de artigo/fonte está versionado (`git ls-files`). |
+| #33 análise dos resultados do artigo | Aberta | Depende do artigo e dos resultados revisados. |
+| #34 fluxo principal | Fechada | Integrado pelo PR #56. |
+| #35 teste integral da Fase I | Aberta | Passou na branch `feature/paula-dev`; falta integrar e validar a versão candidata em `main`. |
+| #36 revisão final | Aberta | Este documento registra a auditoria atualizada; permanecem os bloqueios listados abaixo. |
 
-- README descreve o estado implementado e o ambiente realmente validado.
-- Guia de contribuição registra as diferenças entre nomes planejados e reais
-  das branches, sem renomear branches dos colegas.
-- Documento do dataset deixa claro que pesos e filtros por tecnologia/região
-  não fazem parte da interface atual; a regra descrita corresponde ao código.
-- Guia de entrega passa a apontar os documentos existentes e os critérios de
-  liberação, sem apresentar uma entrega parcial como concluída.
+As issues #16/#17/#19/#22/#23/#28 e demais componentes consultados aparecem
+fechados. O CSV de benchmark de lista está versionado. O estado fechado de #24 e
+#25 foi confirmado, mas a evidência correspondente não está no inventário do
+repositório revisado; não assumir que o item experimental está reproduzível sem
+localizar essa entrega.
 
-## Pendências para concluir a #36
+## Pendências para liberar a Fase I
 
-1. **#16/#17:** integrar e validar quantidade de cruzamentos e concluir análise.
-2. **#23/#24:** executar e revisar benchmarks independentes de lista e matriz
-   com subconjuntos equivalentes; a seleção real das estruturas já está
-   disponível, mas os resultados devem ser comparados funcionalmente.
-3. **#35:** executar a validação completa após as integrações, corrigindo erros
-   impeditivos e registrando evidências finais.
-4. **Resultados:** os subconjuntos da #22 e o benchmark de lista da #23 estão
-   versionados; concluir a comparação com a matriz (#24), os estudos de
-   crescimento e os dados finais para gráficos (#25–#27), conforme o escopo.
-5. **Memória e documentação:** conferir a entrega da #28 e a documentação dos
-   algoritmos (#31). Permanecem limitações conhecidas: retorno ambíguo de falhas
-   de alocação e geometria que não cobre todos os contatos/sobreposições.
-6. **Artigo:** disponibilizar e revisar metodologia e análise dos resultados
-   (#32/#33), alinhadas ao que foi efetivamente implementado e medido.
-7. **GitHub:** confirmar issues/PRs atuais, resolver pendências de revisão com
-   outro integrante e confirmar a branch de destino da integração.
-8. **Entrega:** integrar a versão aprovada em `main`, executar novamente em
-   cópia limpa e registrar o commit final reproduzível antes de fechar a #36.
+1. Fazer revisão de outro integrante e abrir PR para os commits posteriores ao
+   merge #56, incluindo o teste completo da #35; confirmar o destino e evitar
+   integrar diretamente em `main`.
+2. Repetir compilação e `mingw32-make test-integracao` numa cópia limpa da
+   versão candidata já baseada na `main`; resolver ou documentar o bloqueio
+   local do Windows App Control durante `test_conexoes_geograficas.exe`.
+3. Localizar/versionar evidências reproduzíveis de #24/#25 e concluir #26/#27.
+4. Receber e revisar os materiais #31–#33 (algoritmos e artigo SBC), verificando
+   que metodologia e conclusões correspondam ao código e aos dados.
+5. Confirmar a resolução de #29 e os checks do PR no GitHub; fechar #35/#36
+   somente depois da integração aprovada e da validação final em `main`.
 
-Esta lista identifica entregas a conferir, não afirma que todas as issues
-citadas continuam abertas no GitHub. Nenhum artigo, resultado experimental ou
-aprovação de colega foi substituído por uma declaração de conclusão nesta revisão.
+## Conclusão
+
+O fluxo #34 está em `main`; a validação completa #35 passou na branch de
+trabalho, mas ainda não foi integrada. `main` compila e a ajuda executa nesta
+máquina, porém a suíte foi interrompida pelo bloqueio de segurança e a árvore
+não contém a validação integral. Assim, não é possível certificar `main` como a
+versão estável e reproduzível exigida pela #36. A issue deve permanecer aberta
+até a revisão de PR, a integração e as pendências experimentais/editoriais serem
+resolvidas.

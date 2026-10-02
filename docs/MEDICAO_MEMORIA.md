@@ -11,7 +11,9 @@ calculados sobre o mesmo conjunto de vértices e arestas:
   de arestas na capacidade reservada.
 - **Lista:** armazenamento comum, vetor de cabeças na capacidade reservada e
   dois nós `NoAdjacencia` por aresta não direcionada.
-- **Matriz:** armazenamento comum e `ordem × ordem` células de um byte.
+- **Matriz:** armazenamento comum e matriz simétrica compactada em bits; cada
+  linha usa `ceil(ordem / 8)` bytes. Para uma ordem de 65.536, são 512 MiB,
+  em vez de 4 GiB na representação anterior de um byte por célula.
 
 As capacidades reservadas são usadas em vez da quantidade ocupada, pois são os
 bytes que a aplicação efetivamente solicita nas alocações. As operações

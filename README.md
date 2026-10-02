@@ -100,8 +100,9 @@ O fluxo da aplicação aceita opções e salva resultados em CSV:
 ./build/grafo.exe --limite 1000 --estrutura conjunta --saida results/execucoes.csv
 ```
 
-Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso, validação
-e dependências de seleção entre estruturas, estimativa de memória e contagem de cruzamentos.
+Consulte [docs/FLUXO_APLICACAO.md](docs/FLUXO_APLICACAO.md) para uso,
+validação, seleção entre estruturas, estimativa de memória e contagem de
+cruzamentos.
 
 A metodologia da estimativa de memória e suas limitações estão em
 [docs/MEDICAO_MEMORIA.md](docs/MEDICAO_MEMORIA.md).
@@ -143,7 +144,7 @@ Para executar a validação integrada disponível:
 mingw32-make test-integracao
 ```
 
-O teste gera logs, CSV e resumo em `results/integracao-<identificador>/`.
+O teste completo gera logs, CSV e resumo em `results/integracao-<identificador>/`.
 Consulte [docs/TESTE_INTEGRACAO_FASE1.md](docs/TESTE_INTEGRACAO_FASE1.md)
 para os resultados observados.
 
