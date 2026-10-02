@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "grafo.h"
 
@@ -26,6 +27,7 @@ static void teste_cria_conexao_elegivel(void)
 static void teste_detecta_cruzamento(void)
 {
     Grafo *grafo = grafo_criar();
+    Cruzamento *cruzamentos = NULL;
     assert(grafo != NULL);
     assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
     assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 2U, 1.0, 1.0, 1.0) == 1);
@@ -34,7 +36,55 @@ static void teste_detecta_cruzamento(void)
     assert(grafo_adicionar_aresta(grafo, 0U, 1U));
     assert(grafo_adicionar_aresta(grafo, 2U, 3U));
     assert(grafo_possui_cruzamentos(grafo));
+    assert(grafo_detectar_cruzamentos(grafo, NULL) == 1U);
+    assert(grafo_detectar_cruzamentos(grafo, &cruzamentos) == 1U);
+    assert(cruzamentos != NULL);
+    free(cruzamentos);
     grafo_destruir(grafo);
+}
+
+static void teste_estimativa_memoria(void)
+{
+    Grafo *grafo = grafo_criar();
+    EstimativaMemoriaGrafo estimativa;
+    assert(grafo != NULL);
+    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
+    assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, 2U, 0.0, 1.0, 1.0) == 1);
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U));
+    assert(grafo_estimar_memoria(grafo, &estimativa));
+    assert(estimativa.memoria_comum_bytes > 0U);
+    assert(estimativa.memoria_lista_total_bytes > estimativa.memoria_comum_bytes);
+    assert(estimativa.memoria_matriz_total_bytes > estimativa.memoria_comum_bytes);
+    assert(grafo_estimar_memoria(NULL, &estimativa) == 0);
+    assert(grafo_estimar_memoria(grafo, NULL) == 0);
+    grafo_destruir(grafo);
+}
+
+static void teste_representacoes_exclusivas(void)
+{
+    Grafo *lista = grafo_criar_com_estrutura(GRAFO_LISTA_ADJACENCIA);
+    Grafo *matriz = grafo_criar_com_estrutura(GRAFO_MATRIZ_ADJACENCIA);
+    EstimativaMemoriaGrafo memoria_lista, memoria_matriz;
+    assert(lista != NULL && matriz != NULL);
+    assert(grafo_adicionar_antena(lista, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
+    assert(grafo_adicionar_antena(lista, 1U, 1U, 1U, 2U, 0.0, 1.0, 1.0) == 1);
+    assert(grafo_adicionar_aresta(lista, 0U, 1U));
+    assert(grafo_sao_adjacentes(lista, 0U, 1U));
+    assert(grafo_vizinhos(lista, 0U) != NULL);
+    assert(grafo_estimar_memoria(lista, &memoria_lista));
+    assert(memoria_lista.memoria_lista_total_bytes > memoria_lista.memoria_comum_bytes);
+    assert(memoria_lista.memoria_matriz_total_bytes == 0U);
+
+    assert(grafo_adicionar_antena(matriz, 1U, 1U, 1U, 1U, 0.0, 0.0, 1.0) == 0);
+    assert(grafo_adicionar_antena(matriz, 1U, 1U, 1U, 2U, 0.0, 1.0, 1.0) == 1);
+    assert(grafo_adicionar_aresta(matriz, 0U, 1U));
+    assert(grafo_sao_adjacentes(matriz, 0U, 1U));
+    assert(grafo_vizinhos(matriz, 0U) == NULL);
+    assert(grafo_estimar_memoria(matriz, &memoria_matriz));
+    assert(memoria_matriz.memoria_lista_total_bytes == 0U);
+    assert(memoria_matriz.memoria_matriz_total_bytes > memoria_matriz.memoria_comum_bytes);
+    grafo_destruir(lista);
+    grafo_destruir(matriz);
 }
 
 static void teste_representacoes_do_grafo(void)
@@ -113,8 +163,99 @@ static void teste_suporta_mil_vertices(void)
     grafo_destruir(grafo);
 }
 
+static Grafo *criar_grafo_com_vertices(size_t quantidade)
+{
+    Grafo *grafo = grafo_criar();
+    size_t i;
+
+    assert(grafo != NULL);
+    for (i = 0U; i < quantidade; ++i) {
+        assert(grafo_adicionar_antena(grafo, 1U, 1U, 1U, (unsigned int)i,
+                                      0.0, (double)i * 0.001, 1.0) == (int)i);
+    }
+    return grafo;
+}
+
+static void teste_euler_nao_aplicavel(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(2U);
+
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+    assert(grafo_verificar_euler(grafo) == EULER_NAO_APLICAVEL);
+    assert(grafo_verificar_euler(NULL) == EULER_NAO_APLICAVEL);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_triangulo_inconclusivo(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(3U);
+
+    assert(grafo_adicionar_aresta(grafo, 0U, 1U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 1U, 2U) == 1);
+    assert(grafo_adicionar_aresta(grafo, 0U, 2U) == 1);
+    assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_nao_planar(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(5U);
+    size_t i, j;
+
+    for (i = 0U; i < 5U; ++i)
+        for (j = i + 1U; j < 5U; ++j)
+            assert(grafo_adicionar_aresta(grafo, i, j) == 1);
+
+    assert(grafo_quantidade_arestas(grafo) == 10U);
+    assert(grafo_verificar_euler(grafo) == EULER_NAO_PLANAR);
+    grafo_destruir(grafo);
+}
+
+static void teste_euler_inconclusivo(void)
+{
+    Grafo *grafo = criar_grafo_com_vertices(6U);
+    size_t i, j;
+
+    for (i = 0U; i < 3U; ++i)
+        for (j = 3U; j < 6U; ++j)
+            assert(grafo_adicionar_aresta(grafo, i, j) == 1);
+
+    assert(grafo_quantidade_arestas(grafo) == 9U);
+    assert(grafo_verificar_euler(grafo) == EULER_INCONCLUSIVO);
+    grafo_destruir(grafo);
+}
+
+static void teste_quantidades_apos_construcao_automatica(void)
+{
+    Grafo *grafo = grafo_criar();
+    const size_t vertices_esperados = 5U;
+    size_t i, j;
+
+    assert(grafo != NULL);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 1U, -23.000, -46.000, 600.0) == 0);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 2U, -23.001, -46.000, 600.0) == 1);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 3U, -23.002, -46.000, 600.0) == 2);
+    assert(grafo_adicionar_antena(grafo, 724U, 2U, 10U, 4U, -23.100, -46.100, 600.0) == 3);
+    assert(grafo_adicionar_antena(grafo, 999U, 9U, 90U, 5U, 10.000, 10.000, 600.0) == 4);
+
+    assert(grafo_quantidade_vertices(grafo) == vertices_esperados);
+    assert(grafo_quantidade_arestas(grafo) == 0U);
+
+    (void)grafo_construir_conexoes(grafo);
+
+    assert(grafo_quantidade_vertices(grafo) == vertices_esperados);
+    for (i = 0U; i < vertices_esperados; ++i)
+        for (j = i + 1U; j < vertices_esperados; ++j)
+            if (grafo_sao_adjacentes(grafo, i, j))
+                assert(grafo_sao_adjacentes(grafo, j, i));
+
+    grafo_destruir(grafo);
+}
+
 int main(void)
 {
+    teste_estimativa_memoria();
+    teste_representacoes_exclusivas();
     teste_cria_e_destroi_grafo();
     teste_cria_conexao_elegivel();
     teste_detecta_cruzamento();
@@ -122,6 +263,11 @@ int main(void)
     teste_acessa_vizinhos();
     teste_nao_adjacentes_e_vizinhos_vazios();
     teste_suporta_mil_vertices();
+    teste_euler_nao_aplicavel();          
+    teste_euler_triangulo_inconclusivo(); 
+    teste_euler_nao_planar();          
+    teste_euler_inconclusivo();
+    teste_quantidades_apos_construcao_automatica();
     puts("Todos os testes passaram.");
     return 0;
 }

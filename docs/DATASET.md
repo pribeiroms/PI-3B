@@ -46,17 +46,21 @@ O dataset atende aos critérios definidos para o trabalho:
   NR/5G, diretamente pertinentes a um cenário de telecomunicações.
 - **Processamento em C:** é um CSV simples, com nove colunas escalares. Pode ser
   lido sequencialmente com `fgets` e `sscanf`/`strtok`, sem dependências externas.
-- **Construção do grafo:** cada célula pode ser um vértice. Arestas podem conectar
-  células da mesma operadora/tecnologia dentro de um limiar de distância, ou cujas
-  áreas de cobertura estimada se interceptam. `range`, `samples` e a distância podem
-  compor os pesos das arestas.
+- **Construção do grafo na Fase I:** cada registro válido é um vértice. A regra
+  implementada considera `mcc`, `net`, `area`, distância e alcance, selecionando
+  a antena elegível mais próxima. As arestas não possuem peso. Tecnologia e
+  `samples` não são critérios de conexão na implementação atual.
 
 ## Reprodutibilidade
 
-O programa deve receber o caminho `data/opencellid_brasil_filtrado.csv`
-como entrada e validar cabeçalho, conversão numérica e coordenadas antes de criar
-os vértices. Para experimentos menores, filtros por `radio`, operadora ou região
-podem ser aplicados durante a leitura, preservando o arquivo original sem edição.
+O programa recebe o caminho `data/opencellid_brasil_filtrado.csv` como entrada
+e valida cabeçalho, conversão numérica e coordenadas antes de criar os vértices.
+O recorte implementado é o limite dos primeiros registros válidos. Filtros por
+`radio`, operadora ou região não estão disponíveis na interface atual.
+
+Na revisão de 01/10/2026, a contagem de registros e a distribuição por tecnologia
+acima foram conferidas no arquivo versionado. SHA-256:
+`5EB50BD6954466F08ECA483B2D9DA18B50C297E54710532FB7D0646B2987F8DB`.
 
 A regra de formação das arestas sem peso e a verificação de cruzamentos da Fase I
 estão especificadas em [MODELAGEM_GRAFO.md](MODELAGEM_GRAFO.md).
