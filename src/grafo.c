@@ -19,10 +19,29 @@ struct Grafo {
     MatrizAdjacencia matriz_adjacencia;
 };
 
+static int tamanho_array(size_t quantidade, size_t tamanho, size_t *bytes)
+{
+    if (tamanho != 0U && quantidade > SIZE_MAX / tamanho) return 0;
+    *bytes = quantidade * tamanho;
+    return 1;
+}
+
+static int dobrar_capacidade(size_t atual, size_t inicial, size_t *nova)
+{
+    if (atual == 0U) { *nova = inicial; return 1; }
+    if (atual > SIZE_MAX / 2U) return 0;
+    *nova = atual * 2U;
+    return 1;
+}
+
 static int reservar_vertices(Grafo *grafo)
 {
-    size_t capacidade = grafo->capacidade_vertices == 0U ? 128U : grafo->capacidade_vertices * 2U;
-    Vertice *vertices = realloc(grafo->vertices, capacidade * sizeof(*vertices));
+    size_t capacidade, bytes;
+    Vertice *vertices;
+
+    if (!dobrar_capacidade(grafo->capacidade_vertices, 128U, &capacidade) ||
+        !tamanho_array(capacidade, sizeof(*vertices), &bytes)) return 0;
+    vertices = realloc(grafo->vertices, bytes);
 
     if (vertices == NULL) return 0;
     grafo->vertices = vertices;
@@ -32,8 +51,12 @@ static int reservar_vertices(Grafo *grafo)
 
 static int reservar_arestas(Grafo *grafo)
 {
-    size_t capacidade = grafo->capacidade_arestas == 0U ? 128U : grafo->capacidade_arestas * 2U;
-    Aresta *arestas = realloc(grafo->arestas, capacidade * sizeof(*arestas));
+    size_t capacidade, bytes;
+    Aresta *arestas;
+
+    if (!dobrar_capacidade(grafo->capacidade_arestas, 128U, &capacidade) ||
+        !tamanho_array(capacidade, sizeof(*arestas), &bytes)) return 0;
+    arestas = realloc(grafo->arestas, bytes);
 
     if (arestas == NULL) return 0;
     grafo->arestas = arestas;
@@ -45,11 +68,13 @@ static int expandir_adjacencia(Grafo *grafo)
 {
     size_t antiga_ordem = grafo->capacidade_listas > grafo->matriz_adjacencia.ordem ?
         grafo->capacidade_listas : grafo->matriz_adjacencia.ordem;
-    size_t nova_ordem = antiga_ordem == 0U ? 128U : antiga_ordem * 2U;
+    size_t nova_ordem, bytes;
     size_t linha;
+    if (!dobrar_capacidade(antiga_ordem, 128U, &nova_ordem)) return 0;
     if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
-        NoAdjacencia **listas = realloc(grafo->lista_adjacencia.listas,
-            nova_ordem * sizeof(*listas));
+        NoAdjacencia **listas;
+        if (!tamanho_array(nova_ordem, sizeof(*listas), &bytes)) return 0;
+        listas = realloc(grafo->lista_adjacencia.listas, bytes);
         if (listas == NULL) return 0;
         for (linha = grafo->capacidade_listas; linha < nova_ordem; ++linha)
             listas[linha] = NULL;
@@ -59,7 +84,10 @@ static int expandir_adjacencia(Grafo *grafo)
     }
     if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
         size_t ordem_matriz = grafo->matriz_adjacencia.ordem;
-        unsigned char *dados = calloc(nova_ordem * nova_ordem, sizeof(*dados));
+        size_t celulas;
+        unsigned char *dados;
+        if (!tamanho_array(nova_ordem, nova_ordem, &celulas)) return 0;
+        dados = calloc(celulas, sizeof(*dados));
         if (dados == NULL) return 0;
         for (linha = 0U; linha < ordem_matriz; ++linha) {
             memcpy(&dados[linha * nova_ordem],
@@ -246,8 +274,14 @@ size_t grafo_construir_conexoes(Grafo *grafo)
                grafo->matriz_adjacencia.ordem * grafo->matriz_adjacencia.ordem);
     }
     grafo->quantidade_arestas = 0U;
-    proxima = malloc(grafo->quantidade_vertices * sizeof(*proxima));
-    menor = malloc(grafo->quantidade_vertices * sizeof(*menor));
+    {
+        size_t bytes_proxima, bytes_menor;
+        if (!tamanho_array(grafo->quantidade_vertices, sizeof(*proxima), &bytes_proxima) ||
+            !tamanho_array(grafo->quantidade_vertices, sizeof(*menor), &bytes_menor))
+            return 0U;
+        proxima = malloc(bytes_proxima);
+        menor = malloc(bytes_menor);
+    }
     if (proxima == NULL || menor == NULL) {
         free(proxima);
         free(menor);
@@ -354,7 +388,9 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
     if (v < 3U) return EULER_NAO_APLICAVEL;
 
     /* Condicao necessaria: E <= 3V - 6. Se violada, nao e planar. */
-    if (e > 3U * v - 6U) return EULER_NAO_PLANAR;
+    /* Calcular 3(V-2) evita overflow na multiplicação intermediária. */
+    if (v - 2U > SIZE_MAX / 3U) return EULER_INCONCLUSIVO;
+    if (e > 3U * (v - 2U)) return EULER_NAO_PLANAR;
 
     /* Satisfeita, mas Euler sozinho NAO garante planaridade (ex.: K3,3). */
     return EULER_INCONCLUSIVO;
@@ -431,8 +467,13 @@ size_t grafo_detectar_cruzamentos(const Grafo *grafo, Cruzamento **cruzamentos)
                 continue;
             }
             if (quantidade == capacidade) {
-                size_t nova_capacidade = capacidade == 0U ? 8U : capacidade * 2U;
-                realocado = realloc(encontrados, nova_capacidade * sizeof(*realocado));
+                size_t nova_capacidade, bytes;
+                if (!dobrar_capacidade(capacidade, 8U, &nova_capacidade) ||
+                    !tamanho_array(nova_capacidade, sizeof(*realocado), &bytes)) {
+                    free(encontrados);
+                    return 0U;
+                }
+                realocado = realloc(encontrados, bytes);
                 if (realocado == NULL) {
                     free(encontrados);
                     return 0U;
