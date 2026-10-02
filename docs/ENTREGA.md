@@ -27,6 +27,7 @@ validação completa da #35 continuam pendentes.
 - [Modelagem](MODELAGEM_GRAFO.md).
 - [Análise de planaridade](ANALISE_PLANARIDADE.md).
 - [Estimativa de memória](MEDICAO_MEMORIA.md).
+- [Protocolo experimental e subconjuntos de estresse](PROTOCOLO_EXPERIMENTAL.md).
 - [Fluxo e formato dos resultados](FLUXO_APLICACAO.md).
 - [Validação integrada e evidências](TESTE_INTEGRACAO_FASE1.md).
 

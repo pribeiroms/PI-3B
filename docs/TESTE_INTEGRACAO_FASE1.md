@@ -101,9 +101,11 @@ Nenhum erro impeditivo novo da aplicação foi encontrado nos cenários disponí
    registrar novas evidências antes de fechar a #35.
 
 O dataset inteiro contém 62.604 registros de dados; ele não foi processado
-integralmente nesta validação. Foram usados recortes reais, não benchmarks ou
-testes de estresse. A matriz simultânea e a construção por pares tornam a
-execução integral uma validação de escala separada. Falhas de alocação também
+integralmente nesta validação. Os subconjuntos específicos de estresse e suas
+contagens estão em [PROTOCOLO_EXPERIMENTAL.md](PROTOCOLO_EXPERIMENTAL.md) e são
+executados por `mingw32-make test-subconjuntos`. A matriz simultânea e a
+construção por pares tornam a execução integral uma validação de escala
+separada. Falhas de alocação também
 não foram injetadas; permanece a limitação das APIs descrita na documentação
 da #34. A suíte específica de planaridade da #21 não é substituída por estes
 testes de integração.

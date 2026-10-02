@@ -22,6 +22,7 @@ docs/      Documentação técnica e de entrega
 
 - Ambiente validado: Windows com MinGW GCC 6.3.0 e `mingw32-make`.
 - PowerShell para os roteiros de teste do fluxo e de integração.
+- Python 3 para gerar e verificar os subconjuntos do protocolo experimental.
 - Executar os comandos na raiz do projeto; os caminhos padrão são relativos a ela.
 
 O código usa C11. O Makefile e os roteiros atuais contêm comandos específicos de
@@ -45,6 +46,10 @@ mingw32-make run
 
 Consulte [docs/MODELAGEM_GRAFO.md](docs/MODELAGEM_GRAFO.md) para a regra de
 conexão entre antenas e a interpretação do resultado de cruzamentos.
+
+Os subconjuntos reproduzíveis para testes de estresse (N=100, 500, 1.000 e
+5.000), suas contagens e a geração estão descritos em
+[docs/PROTOCOLO_EXPERIMENTAL.md](docs/PROTOCOLO_EXPERIMENTAL.md).
 
 Os executáveis são gerados em `build/`. Para removê-los:
 
