@@ -27,8 +27,14 @@ void execucao_exibir_ajuda(void)
 {
     puts("Uso: grafo.exe [dataset.csv [limite]]\n"
          " ou: grafo.exe [--dataset arquivo] [--limite N] "
-         "[--estrutura lista|matriz|conjunta] [--saida arquivo.csv]\n"
+         "[--estrutura lista|matriz|conjunta] [--saida arquivo.csv] "
+         "[--dot arquivo.dot] [--dot-mapa arquivo.dot]\n"
          "Padroes: dataset versionado, limite 1000, saida results/execucoes.csv.\n"
+
+         "--dot grava o mapa da area completa em coordenadas reais.\n"
+         "--dot-mapa grava a serie de recortes com zoom: a regiao de maior\n"
+         "concentracao e os quatro quadrantes dela.\n"
+
          "Limite 0 carrega todos os registros validos; N limita os vertices.\n"
          "A estrutura selecionada e alocada para a execucao.\n"
          "Nao misture argumentos posicionais com opcoes nomeadas.\n"
@@ -42,6 +48,8 @@ int execucao_ler_opcoes(int argc, char *argv[], OpcoesExecucao *opcoes)
     opcoes->dataset = "data/opencellid_brasil_filtrado.csv";
     opcoes->limite = 1000U;
     opcoes->saida = "results/execucoes.csv";
+    opcoes->dot = NULL;
+    opcoes->dot_mapa = NULL;
     opcoes->estrutura = GRAFO_ESTRUTURA_CONJUNTA;
     if (argc == 2 && (strcmp(argv[1], "--help") == 0 ||
                       strcmp(argv[1], "--ajuda") == 0)) return 0;
@@ -66,6 +74,12 @@ int execucao_ler_opcoes(int argc, char *argv[], OpcoesExecucao *opcoes)
         } else if (strcmp(argv[i], "--saida") == 0) {
             opcao = 4U;
             opcoes->saida = valor;
+        } else if (strcmp(argv[i], "--dot") == 0) {
+            opcao = 16U;
+            opcoes->dot = valor;
+        } else if (strcmp(argv[i], "--dot-mapa") == 0) {
+            opcao = 64U;
+            opcoes->dot_mapa = valor;
         } else if (strcmp(argv[i], "--estrutura") == 0) {
             opcao = 8U;
             if (strcmp(valor, "lista") == 0)

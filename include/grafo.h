@@ -117,4 +117,7 @@ int grafo_segmentos_se_cruzam(Segmento a, Segmento b);
 /* Obtem os indices das antenas (origem/destino) de uma aresta. */
 int grafo_obter_aresta(const Grafo *grafo, size_t indice_aresta, size_t *origem, size_t *destino);
 
+/* Copia os dados de um vertice (antena) pelo indice. Retorna 1 em sucesso. */
+int grafo_obter_vertice(const Grafo *grafo, size_t indice, Vertice *saida);
+
 #endif

@@ -7,6 +7,8 @@ typedef struct {
     const char *dataset;
     size_t limite;
     const char *saida;
+    const char *dot;
+    const char *dot_mapa;
     EstruturaGrafo estrutura;
 } OpcoesExecucao;
 
