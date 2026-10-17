@@ -4,6 +4,7 @@
 
 #include "analise_planaridade.h"
 #include "execucao.h"
+#include "exportar_dot.h"
 
 static double decorrido_ms(clock_t inicio, clock_t fim)
 {
@@ -99,6 +100,23 @@ int main(int argc, char *argv[])
                 cruzamentos[i].aresta_a, origem_a, destino_a,
                 cruzamentos[i].aresta_b, origem_b, destino_b);
         }
+    }
+    if (opcoes.dot != NULL) {
+        if (exportar_dot(grafo, cruzamentos, quantidade_cruzamentos, opcoes.dot))
+            printf("Mapa da area completa exportado em: %s\n", opcoes.dot);
+        else
+            fprintf(stderr, "Erro ao exportar o grafo em %s. Verifique o "
+                "diretorio e as permissoes.\n", opcoes.dot);
+    }
+    if (opcoes.dot_mapa != NULL) {
+        size_t gravados = exportar_dot_mapas(grafo, cruzamentos,
+            quantidade_cruzamentos, opcoes.dot_mapa);
+        if (gravados > 0U)
+            printf("Recortes do mapa exportados: %zu arquivo(s) a partir "
+                "de %s\n", gravados, opcoes.dot_mapa);
+        else
+            fprintf(stderr, "Erro ao exportar os recortes do mapa em %s. "
+                "Verifique o diretorio e as permissoes.\n", opcoes.dot_mapa);
     }
     free(cruzamentos);
 

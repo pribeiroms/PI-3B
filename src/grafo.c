@@ -623,3 +623,11 @@ int grafo_obter_aresta(const Grafo *grafo, size_t indice_aresta, size_t *origem,
     *destino = grafo->arestas[indice_aresta].destino;
     return 1;
 }
+
+int grafo_obter_vertice(const Grafo *grafo, size_t indice, Vertice *saida)
+{
+    if (grafo == NULL || saida == NULL || indice >= grafo->quantidade_vertices)
+        return 0;
+    *saida = grafo->vertices[indice];
+    return 1;
+}
