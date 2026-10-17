@@ -120,4 +120,19 @@ int grafo_obter_aresta(const Grafo *grafo, size_t indice_aresta, size_t *origem,
 /* Copia os dados de um vertice (antena) pelo indice. Retorna 1 em sucesso. */
 int grafo_obter_vertice(const Grafo *grafo, size_t indice, Vertice *saida);
 
+/* --- Fase II --- */
+
+/* Distancia geodesica entre duas coordenadas, em quilometros.
+ *
+ * Formula de Haversine com raio terrestre de 6.371 km. Esta e a unica
+ * implementacao de distancia do projeto: a construcao das conexoes e a regra
+ * de interferencia derivam dela. A unidade e a justificativa estao em
+ * docs/MODELAGEM_PESOS_FASE2.md (issue #65).
+ *
+ * A funcao e simetrica e devolve 0 para coordenadas iguais. Coordenadas fora
+ * do dominio valido nao sao rejeitadas aqui; a validacao ocorre na carga do
+ * dataset.
+ */
+double grafo_distancia_km(CoordenadaGeografica a, CoordenadaGeografica b);
+
 #endif

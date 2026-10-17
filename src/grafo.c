@@ -285,17 +285,25 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
     return carregadas;
 }
 
-static double distancia_metros(const Vertice *a, const Vertice *b)
+double grafo_distancia_km(CoordenadaGeografica a, CoordenadaGeografica b)
 {
     const double radianos = 0.017453292519943295;
-    const double raio_terra = 6371000.0;
-    double dlat = (b->coordenadas.latitude - a->coordenadas.latitude) * radianos;
-    double dlon = (b->coordenadas.longitude - a->coordenadas.longitude) * radianos;
+    const double raio_terra_km = 6371.0;
+    double dlat = (b.latitude - a.latitude) * radianos;
+    double dlon = (b.longitude - a.longitude) * radianos;
     double seno_lat = sin(dlat / 2.0);
     double seno_lon = sin(dlon / 2.0);
-    double x = seno_lat * seno_lat + cos(a->coordenadas.latitude * radianos) *
-               cos(b->coordenadas.latitude * radianos) * seno_lon * seno_lon;
-    return raio_terra * 2.0 * atan2(sqrt(x), sqrt(1.0 - x));
+    double x = seno_lat * seno_lat + cos(a.latitude * radianos) *
+               cos(b.latitude * radianos) * seno_lon * seno_lon;
+    return raio_terra_km * 2.0 * atan2(sqrt(x), sqrt(1.0 - x));
+}
+
+/* A construcao das conexoes compara distancias com o alcance das antenas, que
+ * o dataset informa em metros. Deriva da funcao em quilometros para que exista
+ * uma unica implementacao de distancia no projeto. */
+static double distancia_metros(const Vertice *a, const Vertice *b)
+{
+    return grafo_distancia_km(a->coordenadas, b->coordenadas) * 1000.0;
 }
 
 int grafo_construir_conexoes_ex(Grafo *grafo, size_t *arestas_construidas)

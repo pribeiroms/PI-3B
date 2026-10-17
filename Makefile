@@ -10,12 +10,14 @@ CONEXOES_TEST_APP := $(BUILD_DIR)/test_conexoes_geograficas.exe
 SRC := src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c src/execucao.c src/exportar_dot.c
 ANALISE_TEST_APP := $(BUILD_DIR)/test_analise_planaridade.exe
 DOT_TEST_APP := $(BUILD_DIR)/test_exportar_dot.exe
+DISTANCIA_TEST_APP := $(BUILD_DIR)/test_distancia_geografica.exe
 TEST_SRC := tests/test_grafo.c src/grafo.c
 OPERACOES_TEST_SRC := tests/test_operacoes_grafo.c src/grafo.c
 CONEXOES_TEST_SRC := tests/test_conexoes_geograficas.c src/grafo.c
 DATASET_TEST_SRC := tests/test_dataset.c src/dataset.c src/grafo.c
 DATASET_TEST_APP := $(BUILD_DIR)/test_dataset.exe
 DOT_TEST_SRC := tests/test_exportar_dot.c src/exportar_dot.c src/grafo.c
+DISTANCIA_TEST_SRC := tests/test_distancia_geografica.c src/grafo.c
 DOT_SAIDA ?= results/grafo.dot
 PNG_SAIDA ?= results/grafo.png
 DOT_MAPA ?= results/mapa.dot
@@ -46,6 +48,9 @@ $(DATASET_TEST_APP): $(DATASET_TEST_SRC) include/grafo.h include/dataset.h | $(B
 
 $(DOT_TEST_APP): $(DOT_TEST_SRC) include/grafo.h include/exportar_dot.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(DOT_TEST_SRC) -o $@ $(LDFLAGS)
+
+$(DISTANCIA_TEST_APP): $(DISTANCIA_TEST_SRC) include/grafo.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(DISTANCIA_TEST_SRC) -o $@ $(LDFLAGS)
 
 run: $(APP)
 	./$(APP)
@@ -82,13 +87,14 @@ benchmark-lista: $(APP)
 $(ANALISE_TEST_APP): tests/test_analise_planaridade.c src/analise_planaridade.c include/analise_planaridade.h include/grafo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) tests/test_analise_planaridade.c src/analise_planaridade.c -o $@ $(LDFLAGS)
 
-test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP)
+test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP) $(DISTANCIA_TEST_APP)
 	./$(TEST_APP)
 	./$(OPERACOES_TEST_APP)
 	./$(CONEXOES_TEST_APP)
 	./$(DATASET_TEST_APP)
 	./$(ANALISE_TEST_APP)
 	./$(DOT_TEST_APP)
+	./$(DISTANCIA_TEST_APP)
 
 clean:
 	@cmd /C "if exist \"$(BUILD_DIR)\" rmdir /S /Q \"$(BUILD_DIR)\""
