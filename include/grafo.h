@@ -178,4 +178,15 @@ int grafo_obter_aresta_ponderada(const Grafo *grafo, size_t indice_aresta,
  * e a metragem total de cabo do traçado. */
 double grafo_peso_total(const Grafo *grafo);
 
+/* Conta os componentes conexos por travessia em profundidade.
+ *
+ * Vertices isolados contam um componente cada, e um grafo sem vertices tem
+ * zero componentes. O resultado indica quantas arvores o Kruskal produzira:
+ * mais de um componente significa floresta geradora minima, nao arvore.
+ *
+ * Usa a estrutura ativa: lista em O(V + E), matriz em O(V^2). Retorna 1 em
+ * sucesso e 0 para entrada invalida ou falha de alocacao.
+ */
+int grafo_contar_componentes(const Grafo *grafo, size_t *componentes);
+
 #endif

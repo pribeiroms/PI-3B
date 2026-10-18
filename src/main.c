@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include "analise_planaridade.h"
+#include "candidato_fibra.h"
 #include "execucao.h"
 #include "exportar_dot.h"
 
@@ -24,6 +25,65 @@ static const char *nome_estrutura(EstruturaGrafo estrutura)
     case GRAFO_MATRIZ_ADJACENCIA: return "matriz de adjacencia";
     default: return "lista e matriz simultaneas (conjunta)";
     }
+}
+
+/* Modo --candidato: constroi o grafo de rotas possiveis de fibra e relata o
+ * que a issue #68 pede. A quantidade de componentes conexos e o indicador de
+ * calibracao de k e do raio, conforme docs/MODELAGEM_PESOS_FASE2.md.
+ * Retorna o codigo de saida do programa. */
+static int executar_candidato(Grafo *grafo, const OpcoesExecucao *opcoes,
+                              double leitura_ms)
+{
+    RelatorioCandidatoFibra relatorio;
+    clock_t inicio, fim;
+
+    inicio = clock();
+    if (!candidato_fibra_construir(grafo, opcoes->candidato, &relatorio)) {
+        fputs("Erro ao construir o grafo candidato de cabeamento. Verifique "
+              "os parametros e a memoria disponivel.\n", stderr);
+        grafo_destruir(grafo);
+        return 1;
+    }
+    fim = clock();
+    printf("\nGrafo candidato de cabeamento (Fase II)\n"
+        "Criterio: k = %zu vizinhos mais proximos, raio maximo de %.3f km\n"
+        "Vertices: %zu\nArestas: %zu\nComponentes conexos: %zu\n"
+        "Antenas sem rota candidata: %zu\n"
+        "Soma das rotas candidatas: %.4f km\nMaior rota candidata: %.4f km\n"
+        "Tempos de CPU em ms (-1 = indisponivel):\nLeitura: %.3f\n"
+        "Construcao: %.3f\n",
+        opcoes->candidato.k, opcoes->candidato.raio_maximo_km,
+        relatorio.vertices, relatorio.arestas, relatorio.componentes,
+        relatorio.vertices_isolados, relatorio.peso_total_km,
+        relatorio.maior_aresta_km, leitura_ms, decorrido_ms(inicio, fim));
+    if (relatorio.componentes > 1U)
+        puts("Aviso: o grafo tem mais de um componente conexo; o Kruskal "
+             "produzira uma floresta geradora minima, uma arvore por "
+             "componente.");
+    puts("A soma acima considera todas as rotas candidatas, nao a arvore "
+         "geradora minima: a metragem de fibra sai do Kruskal (#74).");
+    /* O grafo candidato nao passou pelo detector de cruzamentos: essa analise
+     * e da #76, sobre a arvore geradora minima. Por isso o mapa sai sem
+     * destaques em vermelho. */
+    if (opcoes->dot != NULL) {
+        if (exportar_dot(grafo, NULL, 0U, opcoes->dot))
+            printf("Mapa do grafo candidato exportado em: %s\n", opcoes->dot);
+        else
+            fprintf(stderr, "Erro ao exportar o grafo candidato em %s. "
+                "Verifique o diretorio e as permissoes.\n", opcoes->dot);
+    }
+    if (opcoes->dot_mapa != NULL) {
+        size_t gravados = exportar_dot_mapas(grafo, NULL, 0U, opcoes->dot_mapa);
+        if (gravados > 0U)
+            printf("Recortes do grafo candidato exportados: %zu arquivo(s) a "
+                "partir de %s\n", gravados, opcoes->dot_mapa);
+        else
+            fprintf(stderr, "Erro ao exportar os recortes do grafo candidato "
+                "em %s. Verifique o diretorio e as permissoes.\n",
+                opcoes->dot_mapa);
+    }
+    grafo_destruir(grafo);
+    return 0;
 }
 
 static int executar(int argc, char *argv[])
@@ -64,6 +124,8 @@ static int executar(int argc, char *argv[])
         grafo_destruir(grafo);
         return 1;
     }
+    if (opcoes.modo == EXECUCAO_MODO_CANDIDATO)
+        return executar_candidato(grafo, &opcoes, resultado.leitura_ms);
     inicio = clock();
     if (!grafo_construir_conexoes_ex(grafo, &resultado.arestas)) {
         fputs("Erro ao construir conexoes do grafo (memoria insuficiente).\n", stderr);

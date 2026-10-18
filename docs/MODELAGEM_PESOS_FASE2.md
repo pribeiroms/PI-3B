@@ -145,6 +145,48 @@ contagem de cruzamentos mude. Os dois números devem ser relatados lado a lado
 na análise de resultados: a metragem total da AGM e a quantidade de cruzamentos
 nela. A solução mais curta em cabo não é necessariamente a mais barata no total.
 
+## 5.1. Construção e calibração do grafo candidato (#68)
+
+A regra da seção 3 está implementada em `candidato_fibra_construir`
+(`src/candidato_fibra.c`). O executável a aplica sobre o dataset real com:
+
+    grafo.exe --modo candidato [--k N] [--raio-km X]
+
+Esse modo apenas constrói e relata; não grava no CSV de resultados, cujas
+colunas são da Fase I. Os parâmetros padrão são os desta decisão: k = 4 e
+raio de 50 km.
+
+### Medições com o dataset padrão (1.000 antenas)
+
+| k | raio (km) | arestas | componentes | antenas sem rota |
+| --- | --- | --- | --- | --- |
+| 2 | 50 | 1.275 | 95 | 14 |
+| 3 | 50 | 1.867 | 44 | 14 |
+| **4** | **50** | **2.422** | **32** | **14** |
+| 6 | 50 | 3.568 | 27 | 14 |
+| 8 | 50 | 4.729 | 26 | 14 |
+| 4 | 100 | 2.437 | 25 | 7 |
+| 8 | 100 | 4.759 | 19 | 7 |
+
+Com k = 4 e 50 km o grafo tem 2.422 arestas contra as 637 da Fase I, portanto
+passou a conter ciclos e o Kruskal tem rotas redundantes para descartar, que
+era o objetivo da decisão.
+
+### Leitura dos números
+
+- **O grafo é desconexo: 32 componentes.** O Kruskal produzirá uma floresta
+  geradora mínima com 32 árvores, não uma árvore única. Isso é esperado e deve
+  ser relatado, não corrigido (seção 3).
+- **14 antenas não recebem rota nenhuma** com raio de 50 km, e são 14 dos 32
+  componentes. São antenas isoladas no dataset, não um defeito do critério.
+- **Aumentar k tem retorno decrescente.** De k = 2 para k = 4, os componentes
+  caem de 95 para 32; de k = 4 para k = 8, caem só de 32 para 26, ao preço de
+  dobrar as arestas. O raio é que governa o resto: só aumentando-o para 100 km
+  as 14 antenas isoladas caem para 7.
+- A escolha de k = 4 e 50 km se mantém: é o ponto em que o grafo passa a ter
+  ciclos sem inflar o custo do Kruskal, e 50 km já é generoso para uma rota de
+  fibra entre duas antenas.
+
 ## 6. Resumo das decisões
 
 | Item | Decisão |

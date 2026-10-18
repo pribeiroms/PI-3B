@@ -354,6 +354,67 @@ double grafo_peso_total(const Grafo *grafo)
     return total;
 }
 
+/* Empilha os vizinhos ainda nao visitados de um vertice. A pilha tem uma
+ * posicao por vertice e cada vertice e marcado antes de entrar, de modo que
+ * nunca entra duas vezes e a pilha nunca transborda. */
+static void empilhar_vizinhos(const Grafo *grafo, size_t vertice,
+                              unsigned char *visitado, size_t *pilha,
+                              size_t *topo)
+{
+    if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
+        const NoAdjacencia *vizinho;
+        for (vizinho = grafo->lista_adjacencia.listas[vertice]; vizinho != NULL;
+             vizinho = vizinho->proximo)
+            if (!visitado[vizinho->vertice]) {
+                visitado[vizinho->vertice] = 1U;
+                pilha[(*topo)++] = vizinho->vertice;
+            }
+        return;
+    }
+    {
+        size_t candidato;
+        for (candidato = 0U; candidato < grafo->quantidade_vertices; ++candidato)
+            if (candidato != vertice && !visitado[candidato] &&
+                matriz_tem_aresta(&grafo->matriz_adjacencia, vertice, candidato)) {
+                visitado[candidato] = 1U;
+                pilha[(*topo)++] = candidato;
+            }
+    }
+}
+
+int grafo_contar_componentes(const Grafo *grafo, size_t *componentes)
+{
+    unsigned char *visitado;
+    size_t *pilha;
+    size_t bytes_pilha, inicio, topo, total = 0U;
+
+    if (grafo == NULL || componentes == NULL) return 0;
+    *componentes = 0U;
+    if (grafo->quantidade_vertices == 0U) return 1;
+    if (!tamanho_array(grafo->quantidade_vertices, sizeof(*pilha), &bytes_pilha))
+        return 0;
+    visitado = calloc(grafo->quantidade_vertices, sizeof(*visitado));
+    pilha = malloc(bytes_pilha);
+    if (visitado == NULL || pilha == NULL) {
+        free(visitado);
+        free(pilha);
+        return 0;
+    }
+    for (inicio = 0U; inicio < grafo->quantidade_vertices; ++inicio) {
+        if (visitado[inicio]) continue;
+        ++total;
+        visitado[inicio] = 1U;
+        pilha[0] = inicio;
+        topo = 1U;
+        while (topo > 0U)
+            empilhar_vizinhos(grafo, pilha[--topo], visitado, pilha, &topo);
+    }
+    free(visitado);
+    free(pilha);
+    *componentes = total;
+    return 1;
+}
+
 size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
                           char *erro, size_t tamanho_erro)
 {
