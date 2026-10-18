@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "execucao.h"
+#include "utf8io.h"
 
 static int ler_limite(const char *texto, size_t *limite)
 {
@@ -138,7 +139,7 @@ int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
     char data[32] = "indisponivel";
     time_t agora = time(NULL);
     struct tm *utc = gmtime(&agora);
-    FILE *arquivo = fopen(opcoes->saida, "a+");
+    FILE *arquivo = utf8_fopen(opcoes->saida, "a+");
     int vazio, ok;
     if (arquivo == NULL) return 0;
     rewind(arquivo);

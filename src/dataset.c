@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "dataset.h"
+#include "utf8io.h"
 
 #define TAMANHO_LINHA_CSV 512U
 #define CAMPOS_OPENCELLID 9U
@@ -86,7 +87,7 @@ int dataset_carregar_opencellid(Grafo *grafo, const char *caminho, size_t limite
         definir_erro(erro, tamanho_erro, "Grafo ou caminho invalido.");
         return 0;
     }
-    arquivo = fopen(caminho, "r");
+    arquivo = utf8_fopen(caminho, "r");
     if (arquivo == NULL) {
         definir_erro(erro, tamanho_erro, "Nao foi possivel abrir o dataset.");
         return 0;

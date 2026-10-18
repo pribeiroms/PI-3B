@@ -23,12 +23,14 @@ typedef struct {
 typedef struct {
     size_t origem;
     size_t destino;
+    double peso;
 } Aresta;
 
 typedef struct NoAdjacencia NoAdjacencia;
 
 struct NoAdjacencia {
     size_t vertice;
+    double peso;
     NoAdjacencia *proximo;
 };
 
@@ -38,7 +40,8 @@ typedef struct {
 } ListaAdjacencia;
 
 typedef struct {
-    unsigned char *dados;
+    unsigned char *dados;  /* adjacencia, um bit por par de vertices */
+    double *pesos;         /* pesos; NULL ate a primeira aresta com peso */
     size_t ordem;
 } MatrizAdjacencia;
 
@@ -134,5 +137,45 @@ int grafo_obter_vertice(const Grafo *grafo, size_t indice, Vertice *saida);
  * dataset.
  */
 double grafo_distancia_km(CoordenadaGeografica a, CoordenadaGeografica b);
+
+/* Insere uma aresta com peso, em quilometros.
+ *
+ * O peso e gravado nas tres representacoes mantidas pelo grafo: no vetor de
+ * arestas, nos nos da lista de adjacencia e, quando a estrutura inclui a
+ * matriz, numa matriz de pesos paralela a de adjacencia.
+ *
+ * A matriz de pesos e alocada apenas na primeira aresta com peso diferente de
+ * zero: um grafo sem peso, como o da Fase I, nao paga esse custo. Ela ocupa
+ * ordem x ordem doubles, o que a torna o fator dominante de memoria em grafos
+ * valorados grandes.
+ *
+ * Pesos negativos, infinitos ou NaN sao rejeitados. Laços e arestas repetidas
+ * continuam rejeitados, como em grafo_adicionar_aresta.
+ *
+ * Retorna 1 em sucesso e 0 em erro.
+ */
+int grafo_adicionar_aresta_ponderada(Grafo *grafo, size_t origem,
+    size_t destino, double peso);
+
+/* Consulta o peso da aresta entre dois vertices, em quilometros.
+ *
+ * Usa a representacao ativa: a matriz responde em O(1), a lista em O(grau).
+ * Retorna 0 se a aresta nao existir, e nesse caso nao escreve em peso.
+ */
+int grafo_obter_peso(const Grafo *grafo, size_t origem, size_t destino,
+    double *peso);
+
+/* Obtem origem, destino e peso de uma aresta pelo indice no vetor de arestas.
+ * Qualquer um dos ponteiros de saida pode ser NULL. Retorna 1 em sucesso.
+ *
+ * E a forma indicada de percorrer as arestas para ordena-las, como faz o
+ * Kruskal.
+ */
+int grafo_obter_aresta_ponderada(const Grafo *grafo, size_t indice_aresta,
+    size_t *origem, size_t *destino, double *peso);
+
+/* Soma dos pesos de todas as arestas, em quilometros. Em uma arvore geradora,
+ * e a metragem total de cabo do traçado. */
+double grafo_peso_total(const Grafo *grafo);
 
 #endif

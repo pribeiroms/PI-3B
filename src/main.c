@@ -6,6 +6,11 @@
 #include "execucao.h"
 #include "exportar_dot.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#include <shellapi.h>
+#endif
+
 static double decorrido_ms(clock_t inicio, clock_t fim)
 {
     if (inicio == (clock_t)-1 || fim == (clock_t)-1) return -1.0;
@@ -21,7 +26,7 @@ static const char *nome_estrutura(EstruturaGrafo estrutura)
     }
 }
 
-int main(int argc, char *argv[])
+static int executar(int argc, char *argv[])
 {
     OpcoesExecucao opcoes;
     ResultadoExecucao resultado = {0};
@@ -134,9 +139,9 @@ int main(int argc, char *argv[])
     } else {
         puts("Estimativa de memoria: indisponivel (overflow ou entrada invalida).");
     }
-    analise_planaridade_exibir(stdout, resultado.vertices, resultado.arestas,
+        analise_planaridade_exibir(stdout, resultado.vertices, resultado.arestas,
         resultado.euler, resultado.possui_cruzamentos,
-        &resultado.quantidade_cruzamentos);
+        &resultado.quantidade_cruzamentos, NULL);
     if (!execucao_salvar(&opcoes, &resultado)) {
         fprintf(stderr, "Erro ao salvar resultados em %s. Verifique o diretorio, "
             "as permissoes e se o arquivo possui o cabecalho esperado.\n", opcoes.saida);
@@ -145,3 +150,73 @@ int main(int argc, char *argv[])
     printf("Resultados acrescentados em: %s\n", opcoes.saida);
     return 0;
 }
+
+#ifdef _WIN32
+
+/* No Windows, o char *argv[] que o C entrega ja vem recodificado pela CRT
+ * na code page ANSI do sistema. Para caminhos com acentos (ex.: um projeto
+ * dentro de "...\Area de Trabalho\..."), essa recodificacao nao bate com o
+ * UTF-16 que o PowerShell usa internamente nem com o UTF-8 que o restante
+ * do programa espera -- causando falha ao abrir o dataset e divergencia
+ * nos caminhos gravados no CSV de resultados.
+ *
+ * Para evitar isso, ignoramos o argv ja convertido e buscamos os
+ * argumentos originais em UTF-16 diretamente do sistema, convertendo-os
+ * para UTF-8 nos mesmos. Dessa forma o restante do programa (e o arquivo
+ * CSV gravado) trabalha sempre em UTF-8, de forma consistente.
+ */
+int main(void)
+{
+    LPWSTR *wargv;
+    int wargc;
+    int i;
+    char **argv_utf8;
+    int status;
+
+    wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
+    if (wargv == NULL) {
+        fputs("Erro ao obter os argumentos da linha de comando.\n", stderr);
+        return 1;
+    }
+
+    argv_utf8 = (char **)malloc((size_t)wargc * sizeof(char *));
+    if (argv_utf8 == NULL) {
+        fputs("Erro: memoria insuficiente para converter os argumentos.\n", stderr);
+        LocalFree(wargv);
+        return 1;
+    }
+
+    for (i = 0; i < wargc; ++i) {
+        int tamanho = WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0,
+            NULL, NULL);
+        if (tamanho <= 0) {
+            fputs("Erro ao converter os argumentos para UTF-8.\n", stderr);
+            LocalFree(wargv);
+            return 1;
+        }
+        argv_utf8[i] = (char *)malloc((size_t)tamanho);
+        if (argv_utf8[i] == NULL) {
+            fputs("Erro: memoria insuficiente para converter os argumentos.\n", stderr);
+            LocalFree(wargv);
+            return 1;
+        }
+        WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv_utf8[i], tamanho,
+            NULL, NULL);
+    }
+    LocalFree(wargv);
+
+    status = executar(wargc, argv_utf8);
+
+    for (i = 0; i < wargc; ++i) free(argv_utf8[i]);
+    free(argv_utf8);
+    return status;
+}
+
+#else
+
+int main(int argc, char *argv[])
+{
+    return executar(argc, argv);
+}
+
+#endif

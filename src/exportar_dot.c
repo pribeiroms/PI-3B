@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "exportar_dot.h"
-
+#include "utf8io.h"
 /* Lado do desenho, em polegadas. Todos os recortes usam o mesmo lado: o que
  * muda e a area geografica que cabe nele. */
 #define LADO_MAPA 36.0
@@ -411,7 +411,7 @@ static int gravar_mapa(const Grafo *grafo, const Cruzamento *cruzamentos,
     largura = tamanho_por_quantidade ? largura_por_quantidade(exibidos)
         : largura_vertice(grafo, &selecao, escala, maior);
 
-    arquivo = fopen(caminho, "w");
+    arquivo = utf8_fopen(caminho, "w");
     if (arquivo == NULL) {
         selecao_liberar(&selecao);
         return 0;
