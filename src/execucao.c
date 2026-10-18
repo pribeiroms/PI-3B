@@ -44,7 +44,7 @@ void execucao_exibir_ajuda(void)
          " ou: grafo.exe [--dataset arquivo] [--limite N] "
          "[--estrutura lista|matriz|conjunta] [--saida arquivo.csv] "
          "[--dot arquivo.dot] [--dot-mapa arquivo.dot] "
-         "[--modo fase1|candidato] [--k N] [--raio-km X]\n"
+         "[--modo fase1|candidato|interferencia] [--k N] [--raio-km X]\n"
          "Padroes: dataset versionado, limite 1000, saida results/execucoes.csv.\n"
 
          "--dot grava o mapa da area completa em coordenadas reais.\n"
@@ -55,6 +55,12 @@ void execucao_exibir_ajuda(void)
          "e relata vertices, arestas, componentes conexos e fibra total, sem\n"
          "gravar no CSV de resultados. --k e --raio-km calibram o criterio e\n"
          "so valem nesse modo; os padroes sao k = 4 e raio de 50 km.\n"
+
+         "--modo interferencia constroi o grafo de interferencia entre torres\n"
+         "da Fase II e relata vertices, arestas e grau maximo. Duas torres sao\n"
+         "vizinhas quando sao da mesma operadora e a distancia entre elas nao\n"
+         "passa da soma dos alcances. Nao tem parametros: o criterio sai do\n"
+         "proprio dataset.\n"
 
          "Limite 0 carrega todos os registros validos; N limita os vertices.\n"
          "A estrutura selecionada e alocada para a execucao.\n"
@@ -118,6 +124,8 @@ int execucao_ler_opcoes(int argc, char *argv[], OpcoesExecucao *opcoes)
                 opcoes->modo = EXECUCAO_MODO_FASE1;
             else if (strcmp(valor, "candidato") == 0)
                 opcoes->modo = EXECUCAO_MODO_CANDIDATO;
+            else if (strcmp(valor, "interferencia") == 0)
+                opcoes->modo = EXECUCAO_MODO_INTERFERENCIA;
             else goto invalido;
         } else if (strcmp(argv[i], "--k") == 0) {
             opcao = 128U;
