@@ -1,7 +1,17 @@
 #ifndef EXECUCAO_H
 #define EXECUCAO_H
 
+#include "candidato_fibra.h"
 #include "dataset.h"
+
+/* MODO_FASE1 executa a analise de planaridade da Fase I e grava no CSV de
+ * resultados. MODO_CANDIDATO constroi o grafo candidato de cabeamento da
+ * Fase II (issue #68) e apenas relata vertices, arestas e componentes: serve
+ * para calibrar k e raio, e nao grava no CSV, que tem colunas da Fase I. */
+typedef enum {
+    EXECUCAO_MODO_FASE1,
+    EXECUCAO_MODO_CANDIDATO
+} ModoExecucao;
 
 typedef struct {
     const char *dataset;
@@ -10,6 +20,8 @@ typedef struct {
     const char *dot;
     const char *dot_mapa;
     EstruturaGrafo estrutura;
+    ModoExecucao modo;
+    ParametrosCandidatoFibra candidato;
 } OpcoesExecucao;
 
 typedef struct {

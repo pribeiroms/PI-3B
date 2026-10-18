@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 #include <time.h>
 
 #include "execucao.h"
+#include "utf8io.h"
 
 static int ler_limite(const char *texto, size_t *limite)
 {
@@ -23,17 +25,36 @@ static int ler_limite(const char *texto, size_t *limite)
     return 1;
 }
 
+static int ler_raio_km(const char *texto, double *raio)
+{
+    char *fim;
+    double valor;
+    if (*texto == '\0') return 0;
+    errno = 0;
+    valor = strtod(texto, &fim);
+    if (errno == ERANGE || *fim != '\0' || !isfinite(valor) || valor <= 0.0)
+        return 0;
+    *raio = valor;
+    return 1;
+}
+
 void execucao_exibir_ajuda(void)
 {
     puts("Uso: grafo.exe [dataset.csv [limite]]\n"
          " ou: grafo.exe [--dataset arquivo] [--limite N] "
          "[--estrutura lista|matriz|conjunta] [--saida arquivo.csv] "
-         "[--dot arquivo.dot] [--dot-mapa arquivo.dot]\n"
+         "[--dot arquivo.dot] [--dot-mapa arquivo.dot] "
+         "[--modo fase1|candidato] [--k N] [--raio-km X]\n"
          "Padroes: dataset versionado, limite 1000, saida results/execucoes.csv.\n"
 
          "--dot grava o mapa da area completa em coordenadas reais.\n"
          "--dot-mapa grava a serie de recortes com zoom: a regiao de maior\n"
          "concentracao e os quatro quadrantes dela.\n"
+
+         "--modo candidato constroi o grafo candidato de cabeamento da Fase II\n"
+         "e relata vertices, arestas, componentes conexos e fibra total, sem\n"
+         "gravar no CSV de resultados. --k e --raio-km calibram o criterio e\n"
+         "so valem nesse modo; os padroes sao k = 4 e raio de 50 km.\n"
 
          "Limite 0 carrega todos os registros validos; N limita os vertices.\n"
          "A estrutura selecionada e alocada para a execucao.\n"
@@ -51,6 +72,8 @@ int execucao_ler_opcoes(int argc, char *argv[], OpcoesExecucao *opcoes)
     opcoes->dot = NULL;
     opcoes->dot_mapa = NULL;
     opcoes->estrutura = GRAFO_ESTRUTURA_CONJUNTA;
+    opcoes->modo = EXECUCAO_MODO_FASE1;
+    opcoes->candidato = candidato_fibra_parametros_padrao();
     if (argc == 2 && (strcmp(argv[1], "--help") == 0 ||
                       strcmp(argv[1], "--ajuda") == 0)) return 0;
     if (argc > 1 && argv[1][0] != '-') {
@@ -89,13 +112,34 @@ int execucao_ler_opcoes(int argc, char *argv[], OpcoesExecucao *opcoes)
             else if (strcmp(valor, "conjunta") == 0)
                 opcoes->estrutura = GRAFO_ESTRUTURA_CONJUNTA;
             else goto invalido;
+        } else if (strcmp(argv[i], "--modo") == 0) {
+            opcao = 32U;
+            if (strcmp(valor, "fase1") == 0)
+                opcoes->modo = EXECUCAO_MODO_FASE1;
+            else if (strcmp(valor, "candidato") == 0)
+                opcoes->modo = EXECUCAO_MODO_CANDIDATO;
+            else goto invalido;
+        } else if (strcmp(argv[i], "--k") == 0) {
+            opcao = 128U;
+            if (!ler_limite(valor, &opcoes->candidato.k) ||
+                opcoes->candidato.k == 0U) goto invalido;
+        } else if (strcmp(argv[i], "--raio-km") == 0) {
+            opcao = 256U;
+            if (!ler_raio_km(valor, &opcoes->candidato.raio_maximo_km))
+                goto invalido;
         } else goto invalido;
         if ((vistos & opcao) != 0U) goto invalido;
         vistos |= opcao;
     }
+    /* k e raio so fazem sentido no modo candidato; aceita-los em silencio no
+     * modo da Fase I esconderia um engano de quem chamou. */
+    if ((vistos & (128U | 256U)) != 0U &&
+        opcoes->modo != EXECUCAO_MODO_CANDIDATO) goto invalido;
     return 1;
 invalido:
-    fputs("Argumentos invalidos. Consulte --help. Limite deve ser inteiro nao negativo.\n", stderr);
+    fputs("Argumentos invalidos. Consulte --help. Limite deve ser inteiro nao "
+          "negativo. --k (inteiro maior que zero) e --raio-km (numero maior "
+          "que zero) exigem --modo candidato.\n", stderr);
     return -1;
 }
 
@@ -138,7 +182,7 @@ int execucao_salvar(const OpcoesExecucao *opcoes, const ResultadoExecucao *r)
     char data[32] = "indisponivel";
     time_t agora = time(NULL);
     struct tm *utc = gmtime(&agora);
-    FILE *arquivo = fopen(opcoes->saida, "a+");
+    FILE *arquivo = utf8_fopen(opcoes->saida, "a+");
     int vazio, ok;
     if (arquivo == NULL) return 0;
     rewind(arquivo);

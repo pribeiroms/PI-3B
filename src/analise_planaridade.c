@@ -2,7 +2,8 @@
 
 void analise_planaridade_exibir(FILE *saida, size_t vertices, size_t arestas,
     ResultadoEuler euler, int possui_cruzamentos,
-    const size_t *quantidade_cruzamentos)
+    const size_t *quantidade_cruzamentos,
+    const char *detalhamento_cruzamentos)
 {
     fprintf(saida, "\nAnalise consolidada de planaridade\nVertices: %zu\nArestas: %zu\n",
         vertices, arestas);
@@ -22,6 +23,10 @@ void analise_planaridade_exibir(FILE *saida, size_t vertices, size_t arestas,
         possui_cruzamentos = *quantidade_cruzamentos > 0U;
     } else {
         fputs("Quantidade de cruzamentos: indisponivel.\n", saida);
+    }
+    if (detalhamento_cruzamentos != NULL) {
+        fputs("Detalhamento dos cruzamentos:\n", saida);
+        fputs(detalhamento_cruzamentos, saida);
     }
     fputs("Conclusao: ", saida);
     if (euler == EULER_NAO_PLANAR) {
