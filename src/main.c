@@ -6,6 +6,7 @@
 #include "candidato_fibra.h"
 #include "execucao.h"
 #include "exportar_dot.h"
+#include "interferencia.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -86,6 +87,64 @@ static int executar_candidato(Grafo *grafo, const OpcoesExecucao *opcoes,
     return 0;
 }
 
+/* Modo --interferencia: constroi o grafo de interferencia entre torres e
+ * relata o que a issue #69 pede -- vertices, arestas e grau maximo. O grau
+ * maximo e o indicador que importa para a trilha da coloracao: a coloracao
+ * gulosa usa no maximo Delta + 1 cores, logo esse valor e o limite superior de
+ * canais de radio. Retorna o codigo de saida do programa. */
+static int executar_interferencia(Grafo *grafo, const OpcoesExecucao *opcoes,
+                                  double leitura_ms)
+{
+    RelatorioInterferencia relatorio;
+    clock_t inicio, fim;
+
+    inicio = clock();
+    if (!interferencia_construir(grafo, &relatorio)) {
+        fputs("Erro ao construir o grafo de interferencia. Verifique a "
+              "memoria disponivel.\n", stderr);
+        grafo_destruir(grafo);
+        return 1;
+    }
+    fim = clock();
+    printf("\nGrafo de interferencia entre torres (Fase II)\n"
+        "Criterio: mesma operadora (mcc, net e area) e distancia menor ou "
+        "igual a soma dos alcances\n"
+        "Vertices: %zu\nArestas: %zu\n"
+        "Grau maximo (Delta): %zu, na antena de indice %zu\n"
+        "Limite superior de canais de radio (Delta + 1): %zu\n"
+        "Antenas sem interferencia: %zu\n"
+        "Tempos de CPU em ms (-1 = indisponivel):\nLeitura: %.3f\n"
+        "Construcao: %.3f\n",
+        relatorio.vertices, relatorio.arestas, relatorio.grau_maximo,
+        relatorio.vertice_grau_maximo, relatorio.grau_maximo + 1U,
+        relatorio.vertices_isolados, leitura_ms, decorrido_ms(inicio, fim));
+    puts("O limite acima e o pior caso da coloracao gulosa; a quantidade de "
+         "canais efetivamente usada sai da coloracao (#79).");
+    /* O grafo de interferencia nao passa pelo detector de cruzamentos: as
+     * arestas aqui representam sobreposicao de sinal, nao cabo enterrado, e
+     * cruzar no mapa nao custa nada. Por isso o mapa sai sem destaques. */
+    if (opcoes->dot != NULL) {
+        if (exportar_dot(grafo, NULL, 0U, opcoes->dot))
+            printf("Mapa do grafo de interferencia exportado em: %s\n",
+                opcoes->dot);
+        else
+            fprintf(stderr, "Erro ao exportar o grafo de interferencia em %s. "
+                "Verifique o diretorio e as permissoes.\n", opcoes->dot);
+    }
+    if (opcoes->dot_mapa != NULL) {
+        size_t gravados = exportar_dot_mapas(grafo, NULL, 0U, opcoes->dot_mapa);
+        if (gravados > 0U)
+            printf("Recortes do grafo de interferencia exportados: %zu "
+                "arquivo(s) a partir de %s\n", gravados, opcoes->dot_mapa);
+        else
+            fprintf(stderr, "Erro ao exportar os recortes do grafo de "
+                "interferencia em %s. Verifique o diretorio e as "
+                "permissoes.\n", opcoes->dot_mapa);
+    }
+    grafo_destruir(grafo);
+    return 0;
+}
+
 static int executar(int argc, char *argv[])
 {
     OpcoesExecucao opcoes;
@@ -126,6 +185,8 @@ static int executar(int argc, char *argv[])
     }
     if (opcoes.modo == EXECUCAO_MODO_CANDIDATO)
         return executar_candidato(grafo, &opcoes, resultado.leitura_ms);
+    if (opcoes.modo == EXECUCAO_MODO_INTERFERENCIA)
+        return executar_interferencia(grafo, &opcoes, resultado.leitura_ms);
     inicio = clock();
     if (!grafo_construir_conexoes_ex(grafo, &resultado.arestas)) {
         fputs("Erro ao construir conexoes do grafo (memoria insuficiente).\n", stderr);

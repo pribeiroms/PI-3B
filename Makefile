@@ -7,7 +7,7 @@ APP := $(BUILD_DIR)/grafo.exe
 TEST_APP := $(BUILD_DIR)/test_grafo.exe
 OPERACOES_TEST_APP := $(BUILD_DIR)/test_operacoes_grafo.exe
 CONEXOES_TEST_APP := $(BUILD_DIR)/test_conexoes_geograficas.exe
-SRC := src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c src/execucao.c src/exportar_dot.c src/candidato_fibra.c src/utf8io.c
+SRC := src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c src/execucao.c src/exportar_dot.c src/candidato_fibra.c src/interferencia.c src/utf8io.c
 ANALISE_TEST_APP := $(BUILD_DIR)/test_analise_planaridade.exe
 DOT_TEST_APP := $(BUILD_DIR)/test_exportar_dot.exe
 TEST_SRC := tests/test_grafo.c src/grafo.c src/utf8io.c
@@ -22,20 +22,38 @@ PONDERADAS_TEST_APP := $(BUILD_DIR)/test_arestas_ponderadas.exe
 PONDERADAS_TEST_SRC := tests/test_arestas_ponderadas.c src/grafo.c src/utf8io.c
 CANDIDATO_TEST_APP := $(BUILD_DIR)/test_candidato_fibra.exe
 CANDIDATO_TEST_SRC := tests/test_candidato_fibra.c src/candidato_fibra.c src/grafo.c src/utf8io.c
+INTERFERENCIA_TEST_APP := $(BUILD_DIR)/test_interferencia.exe
+INTERFERENCIA_TEST_SRC := tests/test_interferencia.c src/interferencia.c src/grafo.c src/utf8io.c
 DOT_SAIDA ?= results/grafo.dot
 PNG_SAIDA ?= results/grafo.png
 DOT_MAPA ?= results/mapa.dot
 PNG_MAPA ?= results/mapa.png
 DPI ?= 150
 
-.PHONY: all run dot png test test-fluxo test-integracao test-subconjuntos benchmark-lista clean
+# Execucoes dos modos da Fase II. LIMITE e ESTRUTURA valem para os quatro
+# alvos; EXTRA repassa opcoes avulsas ao programa, por exemplo
+# EXTRA="--k 6 --raio-km 30" no modo candidato.
+#
+# Os padroes de --k e --raio-km NAO sao repetidos aqui de proposito: eles
+# vivem em include/candidato_fibra.h e sao aplicados pelo proprio programa.
+# Duplica-los no Makefile criaria duas fontes de verdade que silenciosamente
+# discordariam na primeira vez que uma delas mudasse.
+LIMITE ?= 1000
+ESTRUTURA ?= conjunta
+EXTRA ?=
+DOT_CANDIDATO ?= results/candidato.dot
+DOT_CANDIDATO_MAPA ?= results/candidato_zoom.dot
+DOT_INTERFERENCIA ?= results/interferencia.dot
+DOT_INTERFERENCIA_MAPA ?= results/interferencia_zoom.dot
+
+.PHONY: all run dot png candidato interferencia dot-candidato dot-interferencia test test-fluxo test-integracao test-subconjuntos benchmark-lista clean
 
 all: $(APP)
 
 $(BUILD_DIR):
 	@if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
 
-$(APP): $(SRC) include/grafo.h include/dataset.h include/analise_planaridade.h include/execucao.h include/exportar_dot.h include/candidato_fibra.h include/utf8io.h | $(BUILD_DIR)
+$(APP): $(SRC) include/grafo.h include/dataset.h include/analise_planaridade.h include/execucao.h include/exportar_dot.h include/candidato_fibra.h include/interferencia.h include/utf8io.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
 
 $(TEST_APP): $(TEST_SRC) include/grafo.h include/utf8io.h | $(BUILD_DIR)
@@ -62,6 +80,9 @@ $(PONDERADAS_TEST_APP): $(PONDERADAS_TEST_SRC) include/grafo.h include/utf8io.h 
 $(CANDIDATO_TEST_APP): $(CANDIDATO_TEST_SRC) include/grafo.h include/candidato_fibra.h include/utf8io.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(CANDIDATO_TEST_SRC) -o $@ $(LDFLAGS)
 
+$(INTERFERENCIA_TEST_APP): $(INTERFERENCIA_TEST_SRC) include/grafo.h include/interferencia.h include/utf8io.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(INTERFERENCIA_TEST_SRC) -o $@ $(LDFLAGS)
+
 run: $(APP)
 	./$(APP)
 
@@ -82,6 +103,36 @@ png: dot
 	neato -Tpng -Gdpi=$(DPI) results/mapa_5_sudeste.dot -o results/mapa_5_sudeste.png
 	@echo Imagens geradas em results/
 
+# --- Modos da Fase II ---------------------------------------------------
+# Estes alvos dependem de $(APP), entao recompilam o programa sozinhos se o
+# codigo mudou: nao ha como rodar um grafo.exe velho sem perceber.
+
+# Grafo candidato de cabeamento (issue #68): relata vertices, arestas,
+# componentes conexos e a soma das rotas candidatas.
+candidato: $(APP)
+	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo candidato $(EXTRA)
+
+# Grafo de interferencia entre torres (issue #69): relata vertices, arestas
+# e o grau maximo, que limita a quantidade de canais da coloracao.
+interferencia: $(APP)
+	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo interferencia $(EXTRA)
+
+# Os dois alvos abaixo tambem gravam os mapas em DOT, como o alvo "dot" faz
+# para a Fase I. O caminho passado em --dot-mapa e um molde: o programa grava
+# <base>_1_regiao.dot ate <base>_5_sudeste.dot, e nao um arquivo com o nome
+# da base. Como o alvo "dot", nao exigem o Graphviz instalado.
+dot-candidato: $(APP)
+	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo candidato $(EXTRA) --dot $(DOT_CANDIDATO) --dot-mapa $(DOT_CANDIDATO_MAPA)
+	@echo Mapas do grafo candidato gerados a partir de $(DOT_CANDIDATO) e $(DOT_CANDIDATO_MAPA)
+
+dot-interferencia: $(APP)
+	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo interferencia $(EXTRA) --dot $(DOT_INTERFERENCIA) --dot-mapa $(DOT_INTERFERENCIA_MAPA)
+	@echo Mapas do grafo de interferencia gerados a partir de $(DOT_INTERFERENCIA) e $(DOT_INTERFERENCIA_MAPA)
+
+# O alvo "png" acima converte apenas os mapas da Fase I: os nomes
+# results/mapa_*.dot estao fixos nele. Converter os mapas dos modos da Fase II
+# exige generaliza-lo, o que e escopo da issue #89.
+
 test-fluxo: $(APP)
 	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_fluxo_parcial.ps1
 
@@ -97,7 +148,7 @@ benchmark-lista: $(APP)
 $(ANALISE_TEST_APP): tests/test_analise_planaridade.c src/analise_planaridade.c include/analise_planaridade.h include/grafo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) tests/test_analise_planaridade.c src/analise_planaridade.c -o $@ $(LDFLAGS)
 
-test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP) $(DISTANCIA_TEST_APP) $(PONDERADAS_TEST_APP) $(CANDIDATO_TEST_APP)
+test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP) $(DISTANCIA_TEST_APP) $(PONDERADAS_TEST_APP) $(CANDIDATO_TEST_APP) $(INTERFERENCIA_TEST_APP)
 	./$(TEST_APP)
 	./$(OPERACOES_TEST_APP)
 	./$(CONEXOES_TEST_APP)
@@ -107,6 +158,7 @@ test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP)
 	./$(DISTANCIA_TEST_APP)
 	./$(PONDERADAS_TEST_APP)
 	./$(CANDIDATO_TEST_APP)
+	./$(INTERFERENCIA_TEST_APP)
 
 clean:
 	@cmd /C "if exist \"$(BUILD_DIR)\" rmdir /S /Q \"$(BUILD_DIR)\""
