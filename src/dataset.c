@@ -28,6 +28,22 @@ static int converter_uint(const char *texto, unsigned int *valor)
     return 1;
 }
 
+/* O identificador de celula precisa de 64 bits: o do 5G NR tem 36 bits e
+ * estourava o unsigned int, fazendo o carregador descartar a antena como
+ * registro invalido. */
+static int converter_ull(const char *texto, unsigned long long *valor)
+{
+    char *fim;
+    unsigned long long convertido;
+
+    if (texto == NULL || *texto == '\0' || texto[0] == '-') return 0;
+    errno = 0;
+    convertido = strtoull(texto, &fim, 10);
+    if (errno == ERANGE || *fim != '\0') return 0;
+    *valor = convertido;
+    return 1;
+}
+
 static int converter_double(const char *texto, double *valor)
 {
     char *fim;
@@ -57,13 +73,14 @@ static int separar_campos(char *linha, char **campos)
 static int carregar_registro(Grafo *grafo, char *linha)
 {
     char *campos[CAMPOS_OPENCELLID];
-    unsigned int mcc, net, area, cell, amostras;
+    unsigned int mcc, net, area, amostras;
+    unsigned long long cell;
     double latitude, longitude, alcance;
 
     linha[strcspn(linha, "\r\n")] = '\0';
     if (!separar_campos(linha, campos) || campos[0][0] == '\0' ||
         !converter_uint(campos[1], &mcc) || !converter_uint(campos[2], &net) ||
-        !converter_uint(campos[3], &area) || !converter_uint(campos[4], &cell) ||
+        !converter_uint(campos[3], &area) || !converter_ull(campos[4], &cell) ||
         !converter_double(campos[5], &latitude) || !converter_double(campos[6], &longitude) ||
         !converter_double(campos[7], &alcance) || !converter_uint(campos[8], &amostras)) return 0;
     (void)amostras;

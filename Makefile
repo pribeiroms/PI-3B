@@ -24,10 +24,6 @@ CANDIDATO_TEST_APP := $(BUILD_DIR)/test_candidato_fibra.exe
 CANDIDATO_TEST_SRC := tests/test_candidato_fibra.c src/candidato_fibra.c src/grafo.c src/utf8io.c
 INTERFERENCIA_TEST_APP := $(BUILD_DIR)/test_interferencia.exe
 INTERFERENCIA_TEST_SRC := tests/test_interferencia.c src/interferencia.c src/grafo.c src/utf8io.c
-DOT_SAIDA ?= results/grafo.dot
-PNG_SAIDA ?= results/grafo.png
-DOT_MAPA ?= results/mapa.dot
-PNG_MAPA ?= results/mapa.png
 DPI ?= 150
 
 # Execucoes dos modos da Fase II. LIMITE e ESTRUTURA valem para os quatro
@@ -38,15 +34,72 @@ DPI ?= 150
 # vivem em include/candidato_fibra.h e sao aplicados pelo proprio programa.
 # Duplica-los no Makefile criaria duas fontes de verdade que silenciosamente
 # discordariam na primeira vez que uma delas mudasse.
-LIMITE ?= 1000
+# DATASET aponta os alvos para um arquivo especifico, por exemplo
+# DATASET=data/subconjuntos/fase2/opencellid_denso_n500.csv. Vazio usa o
+# dataset padrao do programa, que e o CSV completo.
+DATASET ?=
+# O rotulo sai do nome do arquivo e entra no nome dos .dot, para que mapas de
+# conjuntos diferentes nao se sobrescrevam: rodar o mesmo alvo nos dados da
+# Fase I e nos da Fase II deixa os dois no disco, com nomes que se explicam.
+ROTULO := $(if $(DATASET),$(basename $(notdir $(DATASET))),completo)
+OPCAO_DATASET := $(if $(DATASET),--dataset $(DATASET),)
+
+# O conjunto sai do caminho do dataset: fase2 e o recorte denso da Fase II,
+# qualquer outra coisa e dado da Fase I -- tanto o CSV completo (que sem
+# --limite entrega as 1.000 primeiras linhas, concentradas no Rio de Janeiro e
+# usadas nos mapas da Fase I) quanto os subconjuntos de amostra uniforme.
+CONJUNTO := $(if $(findstring subconjuntos/fase2,$(DATASET)),fase2,fase1)
+
+# As tres pastas de topo de results/ correspondem ao que cada saida e no
+# relatorio, nao so a qual dado produziu:
+#
+#   results/fase1/        a Fase I como foi entregue, com os dados dela
+#   results/fase1_nova/   a analise da Fase I refeita sobre os dados novos
+#   results/fase2/        os grafos da Fase II (cabeamento e interferencia)
+#
+# Por isso a planaridade e o unico caso que muda de pasta conforme o dado:
+# rodar a analise da Fase I nos dados novos produz a "Fase I nova". Cabeamento
+# e interferencia nao existiam na Fase I, entao seguem o conjunto de dados.
+PASTA_PLANARIDADE := $(if $(filter fase2,$(CONJUNTO)),results/fase1_nova/planaridade,results/fase1/planaridade)
+PASTA_INTERFERENCIA := results/$(CONJUNTO)/interferencia
+PASTA_CANDIDATO := results/$(CONJUNTO)/candidato
+
+# As pastas sao criadas na hora de gravar. python ja e exigido pelos alvos de
+# subconjuntos, e makedirs aceita barra normal no Windows, o que evita a
+# conversao de barras que o mkdir do cmd exigiria.
+CRIAR_PASTA = @python -c "import os,sys; os.makedirs(sys.argv[1], exist_ok=True)"
+
+DOT_SAIDA ?= $(PASTA_PLANARIDADE)/grafo_$(ROTULO).dot
+PNG_SAIDA ?= $(PASTA_PLANARIDADE)/grafo_$(ROTULO).png
+DOT_MAPA ?= $(PASTA_PLANARIDADE)/mapa_$(ROTULO).dot
+PNG_MAPA ?= $(PASTA_PLANARIDADE)/mapa_$(ROTULO).png
+BASE_MAPA := $(basename $(DOT_MAPA))
+# Com um subconjunto escolhido o padrao passa a ser carregar o arquivo inteiro:
+# manter 1000 truncaria o subconjunto em silencio. Passar LIMITE na linha de
+# comando continua tendo precedencia.
+LIMITE ?= $(if $(DATASET),0,1000)
 ESTRUTURA ?= conjunta
 EXTRA ?=
-DOT_CANDIDATO ?= results/candidato.dot
-DOT_CANDIDATO_MAPA ?= results/candidato_zoom.dot
-DOT_INTERFERENCIA ?= results/interferencia.dot
-DOT_INTERFERENCIA_MAPA ?= results/interferencia_zoom.dot
+DOT_CANDIDATO ?= $(PASTA_CANDIDATO)/$(ROTULO).dot
+DOT_CANDIDATO_MAPA ?= $(PASTA_CANDIDATO)/$(ROTULO)_zoom.dot
+DOT_INTERFERENCIA ?= $(PASTA_INTERFERENCIA)/$(ROTULO).dot
+DOT_INTERFERENCIA_MAPA ?= $(PASTA_INTERFERENCIA)/$(ROTULO)_zoom.dot
 
-.PHONY: all run dot png candidato interferencia dot-candidato dot-interferencia test test-fluxo test-integracao test-subconjuntos benchmark-lista clean
+# Qual conjunto de subconjuntos os benchmarks usam. fase1 e a amostra uniforme
+# do Brasil, usada na Fase I; fase2 e o recorte da regiao mais densa, usado nos
+# experimentos da Fase II. Os dois convivem no repositorio.
+SUBCONJUNTOS ?= fase1
+
+# Tamanhos dos subconjuntos da Fase II e o prefixo do caminho deles. Os alvos
+# por tamanho montam o nome do arquivo a partir destes dois.
+TAMANHOS_FASE2 := 10 20 30 40 100 500 1000 5000
+TAMANHOS_GRANDES := 100 500 1000 5000
+MODELO_FASE2_N := data/subconjuntos/fase2/opencellid_denso_n
+
+# Onde a contagem de vertices e arestas da issue #70 fica gravada.
+TABELA_SUBCONJUNTOS ?= docs/CONTAGEM_SUBCONJUNTOS.md
+
+.PHONY: all run dot png candidato interferencia dot-candidato dot-interferencia subconjuntos-fase2 subconjuntos-check tabela-subconjuntos tabela-subconjuntos-tela fase2-tudo fase1-nova test test-fluxo test-integracao test-subconjuntos benchmark-lista clean
 
 all: $(APP)
 
@@ -86,22 +139,28 @@ $(INTERFERENCIA_TEST_APP): $(INTERFERENCIA_TEST_SRC) include/grafo.h include/int
 run: $(APP)
 	./$(APP)
 
-# Gera apenas os arquivos .dot. Nao depende do Graphviz instalado: use a
-# extensao Graphviz Interactive Preview do VS Code para visualizar.
+# Gera apenas os arquivos .dot da analise de planaridade da Fase I. Nao depende
+# do Graphviz instalado: use a extensao Graphviz Interactive Preview do VS Code
+# para visualizar.
+#
+# Com DATASET apontando para o recorte denso, este mesmo alvo produz a "Fase I
+# nova": a analise da Fase I refeita sobre os dados da Fase II, que e o que
+# permite o artigo final apresentar as duas fases sobre o mesmo dado.
 dot: $(APP)
-	./$(APP) --dot $(DOT_SAIDA) --dot-mapa $(DOT_MAPA)
+	$(CRIAR_PASTA) $(PASTA_PLANARIDADE)
+	./$(APP) $(OPCAO_DATASET) --limite $(LIMITE) --dot $(DOT_SAIDA) --dot-mapa $(DOT_MAPA)
 	@echo Arquivos DOT gerados em $(DOT_SAIDA) e $(DOT_MAPA)
 	@echo Abra-os no VS Code e use a preview com o motor neato.
 
 # Converte os .dot em imagens. Exige o Graphviz instalado no sistema.
 png: dot
 	neato -Tpng -Gdpi=$(DPI) $(DOT_SAIDA) -o $(PNG_SAIDA)
-	neato -Tpng -Gdpi=$(DPI) results/mapa_1_regiao.dot -o results/mapa_1_regiao.png
-	neato -Tpng -Gdpi=$(DPI) results/mapa_2_noroeste.dot -o results/mapa_2_noroeste.png
-	neato -Tpng -Gdpi=$(DPI) results/mapa_3_nordeste.dot -o results/mapa_3_nordeste.png
-	neato -Tpng -Gdpi=$(DPI) results/mapa_4_sudoeste.dot -o results/mapa_4_sudoeste.png
-	neato -Tpng -Gdpi=$(DPI) results/mapa_5_sudeste.dot -o results/mapa_5_sudeste.png
-	@echo Imagens geradas em results/
+	neato -Tpng -Gdpi=$(DPI) $(BASE_MAPA)_1_regiao.dot -o $(BASE_MAPA)_1_regiao.png
+	neato -Tpng -Gdpi=$(DPI) $(BASE_MAPA)_2_noroeste.dot -o $(BASE_MAPA)_2_noroeste.png
+	neato -Tpng -Gdpi=$(DPI) $(BASE_MAPA)_3_nordeste.dot -o $(BASE_MAPA)_3_nordeste.png
+	neato -Tpng -Gdpi=$(DPI) $(BASE_MAPA)_4_sudoeste.dot -o $(BASE_MAPA)_4_sudoeste.png
+	neato -Tpng -Gdpi=$(DPI) $(BASE_MAPA)_5_sudeste.dot -o $(BASE_MAPA)_5_sudeste.png
+	@echo Imagens geradas em $(PASTA_PLANARIDADE)
 
 # --- Modos da Fase II ---------------------------------------------------
 # Estes alvos dependem de $(APP), entao recompilam o programa sozinhos se o
@@ -110,23 +169,25 @@ png: dot
 # Grafo candidato de cabeamento (issue #68): relata vertices, arestas,
 # componentes conexos e a soma das rotas candidatas.
 candidato: $(APP)
-	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo candidato $(EXTRA)
+	./$(APP) $(OPCAO_DATASET) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo candidato $(EXTRA)
 
 # Grafo de interferencia entre torres (issue #69): relata vertices, arestas
 # e o grau maximo, que limita a quantidade de canais da coloracao.
 interferencia: $(APP)
-	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo interferencia $(EXTRA)
+	./$(APP) $(OPCAO_DATASET) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo interferencia $(EXTRA)
 
 # Os dois alvos abaixo tambem gravam os mapas em DOT, como o alvo "dot" faz
 # para a Fase I. O caminho passado em --dot-mapa e um molde: o programa grava
 # <base>_1_regiao.dot ate <base>_5_sudeste.dot, e nao um arquivo com o nome
 # da base. Como o alvo "dot", nao exigem o Graphviz instalado.
 dot-candidato: $(APP)
-	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo candidato $(EXTRA) --dot $(DOT_CANDIDATO) --dot-mapa $(DOT_CANDIDATO_MAPA)
+	$(CRIAR_PASTA) $(PASTA_CANDIDATO)
+	./$(APP) $(OPCAO_DATASET) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo candidato $(EXTRA) --dot $(DOT_CANDIDATO) --dot-mapa $(DOT_CANDIDATO_MAPA)
 	@echo Mapas do grafo candidato gerados a partir de $(DOT_CANDIDATO) e $(DOT_CANDIDATO_MAPA)
 
 dot-interferencia: $(APP)
-	./$(APP) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo interferencia $(EXTRA) --dot $(DOT_INTERFERENCIA) --dot-mapa $(DOT_INTERFERENCIA_MAPA)
+	$(CRIAR_PASTA) $(PASTA_INTERFERENCIA)
+	./$(APP) $(OPCAO_DATASET) --limite $(LIMITE) --estrutura $(ESTRUTURA) --modo interferencia $(EXTRA) --dot $(DOT_INTERFERENCIA) --dot-mapa $(DOT_INTERFERENCIA_MAPA)
 	@echo Mapas do grafo de interferencia gerados a partir de $(DOT_INTERFERENCIA) e $(DOT_INTERFERENCIA_MAPA)
 
 # O alvo "png" acima converte apenas os mapas da Fase I: os nomes
@@ -143,7 +204,58 @@ test-subconjuntos: $(APP)
 	powershell -NoProfile -ExecutionPolicy Bypass -File tests/test_subconjuntos_estresse.ps1
 
 benchmark-lista: $(APP)
-	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/benchmark_lista.ps1 -Saida results/benchmark_lista.csv
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/benchmark_lista.ps1 -Subconjuntos $(SUBCONJUNTOS)
+
+# --- Subconjuntos da Fase II (issue #70) ------------------------------------
+# Os subconjuntos da Fase I continuam sendo gerados por
+# scripts/gerar_subconjuntos.py e nao sao tocados por nenhum alvo daqui.
+
+# Regrava data/subconjuntos/fase2/. O criterio e deterministico: nao ha semente
+# e rodar de novo produz os mesmos bytes.
+subconjuntos-fase2:
+	python scripts/gerar_subconjuntos_fase2.py
+
+# Confere que os dois conjuntos no disco correspondem ao dataset e ao criterio.
+subconjuntos-check:
+	python scripts/gerar_subconjuntos.py --check
+	python scripts/gerar_subconjuntos_fase2.py --check
+
+# Mede a contagem de vertices e arestas que a issue #70 pede e grava em
+# docs/. A tabela e medida executando o programa, nao copiada a mao: regenerar
+# e um comando, e o arquivo nunca fica desatualizado em silencio.
+tabela-subconjuntos: $(APP)
+	python scripts/tabela_subconjuntos.py --saida $(TABELA_SUBCONJUNTOS)
+
+# Mesma tabela, so no terminal, sem gravar.
+tabela-subconjuntos-tela: $(APP)
+	python scripts/tabela_subconjuntos.py
+
+# --- Mapas por subconjunto -------------------------------------------------
+# Evitam digitar o caminho do dataset. Para um tamanho so:
+#
+#   mingw32-make fase2-n500        cabeamento e interferencia do n500
+#   mingw32-make fase1-nova-n1000  planaridade do n1000 nos dados novos
+#
+# e para todos de uma vez, fase2-tudo e fase1-nova.
+#
+# Cada alvo chama o make de novo passando DATASET, em vez de repetir a receita:
+# assim existe um unico lugar que sabe montar a linha de comando do programa.
+fase2-n%:
+	@$(MAKE) --no-print-directory dot-interferencia DATASET=$(MODELO_FASE2_N)$*.csv
+	@$(MAKE) --no-print-directory dot-candidato DATASET=$(MODELO_FASE2_N)$*.csv
+
+fase1-nova-n%:
+	@$(MAKE) --no-print-directory dot DATASET=$(MODELO_FASE2_N)$*.csv
+
+# Todos os tamanhos. Os pequenos existem para a coloracao exata e sao os unicos
+# em que o desenho da interferencia fica legivel; os grandes saturam o mapa.
+fase2-tudo: $(addprefix fase2-n,$(TAMANHOS_FASE2))
+	@echo Mapas da Fase II gerados em results/fase2/
+
+# A planaridade so e rodada nos tamanhos grandes: com 10 ou 20 antenas a
+# analise de cruzamentos nao diz nada util.
+fase1-nova: $(addprefix fase1-nova-n,$(TAMANHOS_GRANDES))
+	@echo Analise da Fase I sobre os dados novos gerada em results/fase1_nova/
 
 $(ANALISE_TEST_APP): tests/test_analise_planaridade.c src/analise_planaridade.c include/analise_planaridade.h include/grafo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) tests/test_analise_planaridade.c src/analise_planaridade.c -o $@ $(LDFLAGS)

@@ -1,0 +1,10 @@
+# Os subconjuntos sao verificados por SHA-256 do conteudo em disco
+# (scripts/gerar_subconjuntos.py e gerar_subconjuntos_fase2.py, e o
+# tests/test_subconjuntos_estresse.ps1). Sem esta regra, o git entrega CRLF em
+# checkout no Windows e LF em Linux ou macOS, o hash muda com o sistema
+# operacional e a verificacao acusa divergencia onde nao ha nenhuma.
+#
+# Forcar CRLF mantem o byte a byte identico em qualquer maquina e preserva os
+# hashes ja travados: o conteudo no repositorio nao muda, so o checkout passa a
+# ser consistente.
+*.csv text eol=crlf

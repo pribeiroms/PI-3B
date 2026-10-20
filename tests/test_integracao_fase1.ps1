@@ -157,11 +157,16 @@ try {
                 '--limite', '0', '--estrutura', $estrutura, '--saida', $csv) 0
             $rCompleto = (Import-Csv -LiteralPath $csv | Select-Object -Last 1)
             Conferir ($rCompleto.estrutura -eq $estrutura -and $rCompleto.limite -eq '0' -and
-                $rCompleto.vertices -eq '61933' -and
-                $rCompleto.arestas -eq '38131' -and $rCompleto.registros_invalidos -eq '671' -and
+                # Referencias atualizadas junto com a correcao do campo cell
+                # para 64 bits (#70). Antes dela o carregador descartava 671
+                # antenas 5G NR por estouro de unsigned int, e os valores eram
+                # 61933 vertices, 38131 arestas, 671 registros invalidos e
+                # 10211 cruzamentos.
+                $rCompleto.vertices -eq '62604' -and
+                $rCompleto.arestas -eq '38548' -and $rCompleto.registros_invalidos -eq '0' -and
                 $rCompleto.euler -eq 'inconclusivo' -and
                 $rCompleto.possui_cruzamentos -eq '1' -and
-                $rCompleto.quantidade_cruzamentos -eq '10211' -and
+                $rCompleto.quantidade_cruzamentos -eq '10579' -and
                 $rCompleto.status_cruzamentos -eq 'calculado' -and
                 $rCompleto.status_memoria -eq 'estimada_modelo_alocacoes' -and
                 $rCompleto.status_analise -eq 'parcial' -and
@@ -191,7 +196,7 @@ try {
             Conferir ($saidaCompleta.Contains("Vertices: $($rCompleto.vertices)`r`n") -and
                 $saidaCompleta.Contains("Arestas: $($rCompleto.arestas)`r`n") -and
                 $saidaCompleta.Contains("Estrutura: $estrutura de adjacencia") -and
-                $saidaCompleta.Contains('Quantidade de cruzamentos: 10211') -and
+                $saidaCompleta.Contains("Quantidade de cruzamentos: $($rCompleto.quantidade_cruzamentos)") -and
                 $saidaCompleta.Contains("Lista de adjacencia: $($rCompleto.memoria_lista_total_bytes)`r`n") -and
                 $saidaCompleta.Contains("Matriz de adjacencia: $($rCompleto.memoria_matriz_total_bytes)`r`n")) `
                 "Saida do terminal incompleta no dataset completo em $estrutura."
