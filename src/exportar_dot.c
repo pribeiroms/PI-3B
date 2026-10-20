@@ -346,7 +346,7 @@ static int escrever_vertices(FILE *arquivo, const Grafo *grafo,
                 "fontcolor=\"#ffffff\", penwidth=0.8, width=%.4f",
                 largura * 2.0);
         }
-        fprintf(arquivo, ", tooltip=\"antena %zu | celula %u | mcc %u net %u "
+        fprintf(arquivo, ", tooltip=\"antena %zu | celula %llu | mcc %u net %u "
             "area %u | lat %.4f lon %.4f | alcance %.0f m%s\"];\n",
             i, vertice.cell, vertice.mcc, vertice.net, vertice.area,
             vertice.coordenadas.latitude, vertice.coordenadas.longitude,

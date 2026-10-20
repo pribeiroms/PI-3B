@@ -1,6 +1,11 @@
 param(
     [int]$Repeticoes = 5,
-    [string]$Saida = 'results/benchmark_matriz.csv'
+    [string]$Saida = '',
+    # fase1: amostra uniforme do Brasil, usada na Fase I.
+    # fase2: recorte da regiao mais densa, usado nos experimentos da Fase II.
+    # Os dois conjuntos convivem; a escolha nao altera nenhum arquivo do outro.
+    [ValidateSet('fase1', 'fase2')]
+    [string]$Subconjuntos = 'fase1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -8,15 +13,33 @@ if ($Repeticoes -lt 1) { throw 'Repeticoes deve ser maior que zero.' }
 $raizProjeto = Split-Path -Parent $PSScriptRoot
 $executavel = Join-Path $raizProjeto 'build/grafo.exe'
 $pastaBuild = Join-Path $raizProjeto 'build'
+if ([string]::IsNullOrEmpty($Saida)) {
+    $Saida = if ($Subconjuntos -eq 'fase1') { 'results/benchmark_matriz.csv' }
+             else { 'results/benchmark_matriz_fase2.csv' }
+}
 $destino = Join-Path $raizProjeto $Saida
 $idExecucao = [guid]::NewGuid().ToString('N')
 $csvInterno = Join-Path $pastaBuild ('benchmark-matriz-interno-' + $idExecucao + '.csv')
-$referencias = @(
-    @{ n = 100; arestas = 2; cruzamentos = 0 },
-    @{ n = 500; arestas = 48; cruzamentos = 0 },
-    @{ n = 1000; arestas = 186; cruzamentos = 7 },
-    @{ n = 5000; arestas = 1897; cruzamentos = 225 }
-)
+# Os valores de referencia sao os medidos para cada conjunto. Eles existem para
+# o benchmark falhar alto se o grafo mudar sem querer, em vez de publicar
+# tempos de um grafo diferente do esperado.
+if ($Subconjuntos -eq 'fase1') {
+    $modelo = 'data/subconjuntos/opencellid_n{0}.csv'
+    $referencias = @(
+        @{ n = 100; arestas = 2; cruzamentos = 0 },
+        @{ n = 500; arestas = 48; cruzamentos = 0 },
+        @{ n = 1000; arestas = 186; cruzamentos = 7 },
+        @{ n = 5000; arestas = 1897; cruzamentos = 225 }
+    )
+} else {
+    $modelo = 'data/subconjuntos/fase2/opencellid_denso_n{0}.csv'
+    $referencias = @(
+        @{ n = 100; arestas = 66; cruzamentos = 10 },
+        @{ n = 500; arestas = 336; cruzamentos = 124 },
+        @{ n = 1000; arestas = 686; cruzamentos = 252 },
+        @{ n = 5000; arestas = 3446; cruzamentos = 1725 }
+    )
+}
 
 Push-Location $raizProjeto
 try {
@@ -28,7 +51,7 @@ try {
     $processador = $env:PROCESSOR_IDENTIFIER
     foreach ($referencia in $referencias) {
         $n = $referencia.n
-        $dataset = "data/subconjuntos/opencellid_n$n.csv"
+        $dataset = $modelo -f $n
         for ($repeticao = 1; $repeticao -le $Repeticoes; $repeticao++) {
             $stdout = Join-Path $pastaBuild "benchmark-matriz-$idExecucao-$n-$repeticao.stdout.log"
             $stderr = Join-Path $pastaBuild "benchmark-matriz-$idExecucao-$n-$repeticao.stderr.log"
@@ -67,7 +90,7 @@ try {
             }
             foreach ($campo in $resultado.PSObject.Properties) { $linha[$campo.Name] = $campo.Value }
             $registros.Add([pscustomobject]$linha)
-            Write-Output "Matriz N=$n repeticao=$repeticao : V=$($resultado.vertices), E=$($resultado.arestas), CPU=$($resultado.total_cpu_ms) ms, parede=$($linha.tempo_parede_total_ms) ms"
+            Write-Output "Matriz [$Subconjuntos] N=$n repeticao=$repeticao : V=$($resultado.vertices), E=$($resultado.arestas), CPU=$($resultado.total_cpu_ms) ms, parede=$($linha.tempo_parede_total_ms) ms"
         }
     }
     $registros | Export-Csv -LiteralPath $destino -NoTypeInformation -Encoding UTF8

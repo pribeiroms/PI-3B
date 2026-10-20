@@ -241,7 +241,7 @@ int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice)
 }
 
 int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
-                           unsigned int area, unsigned int cell, double latitude,
+                           unsigned int area, unsigned long long cell, double latitude,
                            double longitude, double alcance_metros)
 {
 	if (grafo_adicionar_antena_ex(grafo, mcc, net, area, cell, latitude,
@@ -250,7 +250,7 @@ int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
 }
 
 int grafo_adicionar_antena_ex(Grafo *grafo, unsigned int mcc, unsigned int net,
-						      unsigned int area, unsigned int cell, double latitude,
+						      unsigned int area, unsigned long long cell, double latitude,
 						      double longitude, double alcance_metros)
 {
     Vertice vertice = {0U, mcc, net, area, cell, {latitude, longitude}, alcance_metros};
@@ -439,9 +439,10 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
     }
     while ((max_antenas == 0U || carregadas < max_antenas) &&
            fgets(linha, sizeof(linha), arquivo) != NULL) {
-        unsigned int mcc, net, area, cell, amostras;
+        unsigned int mcc, net, area, amostras;
+        unsigned long long cell;
         double latitude, longitude, alcance;
-        if (sscanf(linha, "%15[^,],%u,%u,%u,%u,%lf,%lf,%lf,%u", radio, &mcc, &net, &area,
+        if (sscanf(linha, "%15[^,],%u,%u,%u,%llu,%lf,%lf,%lf,%u", radio, &mcc, &net, &area,
                    &cell, &latitude, &longitude, &alcance, &amostras) == 9 &&
             grafo_adicionar_antena(grafo, mcc, net, area, cell, latitude, longitude, alcance) >= 0)
             ++carregadas;

@@ -13,6 +13,8 @@ Push-Location $raizProjeto
 try {
     & python scripts/gerar_subconjuntos.py --check
     if ($LASTEXITCODE -ne 0) { throw 'Subconjuntos divergem do algoritmo de selecao versionado.' }
+    & python scripts/gerar_subconjuntos_fase2.py --check
+    if ($LASTEXITCODE -ne 0) { throw 'Subconjuntos da Fase II divergem do criterio versionado.' }
     foreach ($referencia in $referencias) {
         $n = $referencia.n
         $dataset = "data/subconjuntos/opencellid_n$n.csv"

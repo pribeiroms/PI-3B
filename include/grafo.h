@@ -15,7 +15,9 @@ typedef struct {
     unsigned int mcc;
     unsigned int net;
     unsigned int area;
-    unsigned int cell;
+    /* O identificador de celula do 5G NR tem 36 bits e nao cabe em 32: usar
+     * unsigned int aqui descartava 84% das antenas NR do dataset na leitura. */
+    unsigned long long cell;
     CoordenadaGeografica coordenadas;
     double alcance_metros;
 } Vertice;
@@ -73,10 +75,10 @@ void grafo_destruir(Grafo *grafo);
 
 int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice);
 int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
-    unsigned int area, unsigned int cell, double latitude,
+    unsigned int area, unsigned long long cell, double latitude,
     double longitude, double alcance_metros);
 int grafo_adicionar_antena_ex(Grafo *grafo, unsigned int mcc, unsigned int net,
-    unsigned int area, unsigned int cell, double latitude,
+    unsigned int area, unsigned long long cell, double latitude,
     double longitude, double alcance_metros);
 int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino);
 
