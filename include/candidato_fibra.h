@@ -5,10 +5,20 @@
 
 #include "grafo.h"
 
-/* Parametros padrao decididos na issue #65 e registrados em
- * docs/MODELAGEM_PESOS_FASE2.md. k e o raio devem ser calibrados pela quantidade de componentes conexos
- * que produzem. */
-#define CANDIDATO_FIBRA_K_PADRAO 4U
+/* Parametros padrao registrados em docs/MODELAGEM_PESOS_FASE2.md. k e o raio
+ * sao calibrados pela quantidade de componentes conexos que produzem.
+ *
+ * k = 6 foi adotado na issue #71: sobre os subconjuntos densos da Fase II ele
+ * produz um grafo CONEXO, e o Kruskal devolve uma arvore geradora minima unica
+ * em vez de uma floresta. Com k = 4, que era o padrao da #65, restavam 5
+ * componentes. A calibracao original, feita sobre as 1.000 primeiras linhas do
+ * CSV, continua registrada no documento.
+ *
+ * O raio maximo nao tem efeito sobre os subconjuntos densos, que cabem inteiros
+ * em poucos quilometros; ele permanece como salvaguarda para datasets
+ * geograficamente espalhados, onde evita rotas irreais entre regioes distantes.
+ */
+#define CANDIDATO_FIBRA_K_PADRAO 6U
 #define CANDIDATO_FIBRA_RAIO_PADRAO_KM 50.0
 
 typedef struct {
