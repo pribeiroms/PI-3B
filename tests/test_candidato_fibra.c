@@ -197,8 +197,10 @@ static void teste_mil_vertices(void)
         antena(grafo, i, -23.0 + (double)(i / 40U) * 0.02,
             -46.0 + (double)(i % 40U) * 0.02);
 
-    assert(candidato_fibra_construir(grafo,
-        candidato_fibra_parametros_padrao(), &relatorio));
+    /* k = 4 fixo aqui: a contagem abaixo e deduzida da geometria da malha para
+     * quatro vizinhas. Nao usa o padrao publicado de proposito, para que uma
+     * mudanca de calibracao nao quebre um teste que e sobre o algoritmo. */
+    assert(candidato_fibra_construir(grafo, parametros(4U, 50.0), &relatorio));
     assert(relatorio.vertices == 1000U);
     /* Numa malha, as quatro vizinhas mais proximas de uma antena interna sao
      * as ortogonais: 39 x 25 horizontais + 40 x 24 verticais = 1.935 rotas.
@@ -213,6 +215,19 @@ static void teste_mil_vertices(void)
      * antenas distantes. */
     assert(relatorio.maior_aresta_km < 4.2);
     grafo_destruir(grafo);
+}
+
+/* Os parametros padrao sao uma decisao documentada, nao um detalhe de
+ * implementacao: docs/MODELAGEM_PESOS_FASE2.md registra k = 6 e raio de 50 km.
+ * Fixar os dois aqui impede que o codigo e o documento divirjam em silencio. */
+static void teste_parametros_padrao(void)
+{
+    ParametrosCandidatoFibra padrao = candidato_fibra_parametros_padrao();
+
+    assert(padrao.k == CANDIDATO_FIBRA_K_PADRAO);
+    assert(padrao.raio_maximo_km == CANDIDATO_FIBRA_RAIO_PADRAO_KM);
+    assert(padrao.k == 6U);
+    assert(padrao.raio_maximo_km == 50.0);
 }
 
 static void teste_contagem_de_componentes(EstruturaGrafo estrutura)
@@ -245,6 +260,7 @@ int main(void)
     teste_antena_isolada();
     teste_parametros_invalidos();
     teste_grafos_minusculos();
+    teste_parametros_padrao();
     teste_mil_vertices();
     teste_contagem_de_componentes(GRAFO_ESTRUTURA_CONJUNTA);
     teste_contagem_de_componentes(GRAFO_LISTA_ADJACENCIA);

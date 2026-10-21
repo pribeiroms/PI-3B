@@ -99,9 +99,47 @@ MODELO_FASE2_N := data/subconjuntos/fase2/opencellid_denso_n
 # Onde a contagem de vertices e arestas da issue #70 fica gravada.
 TABELA_SUBCONJUNTOS ?= docs/CONTAGEM_SUBCONJUNTOS.md
 
-.PHONY: all run dot png candidato interferencia dot-candidato dot-interferencia subconjuntos-fase2 subconjuntos-check tabela-subconjuntos tabela-subconjuntos-tela fase2-tudo fase1-nova test test-fluxo test-integracao test-subconjuntos benchmark-lista clean
+.PHONY: all run dot png candidato interferencia dot-candidato dot-interferencia subconjuntos-fase2 subconjuntos-check tabela-subconjuntos tabela-subconjuntos-tela fase2-tudo fase1-nova ajuda test test-fluxo test-integracao test-subconjuntos benchmark-lista clean
 
 all: $(APP)
+
+# Lista os alvos. Sem linhas em branco de proposito: "echo" sem argumento
+# imprime "ECHO is on." no cmd do Windows.
+ajuda:
+	@echo ---------------------------------------------------------------
+	@echo BUILD E TESTES
+	@echo "  mingw32-make                    compila o grafo.exe"
+	@echo "  mingw32-make test               os 10 binarios de teste"
+	@echo "  mingw32-make test-integracao    integracao da Fase I"
+	@echo "  mingw32-make test-subconjuntos  hashes e contagens travados"
+	@echo "  mingw32-make clean              apaga o build"
+	@echo ---------------------------------------------------------------
+	@echo DADOS
+	@echo "  mingw32-make subconjuntos-fase2   regera os subconjuntos densos"
+	@echo "  mingw32-make subconjuntos-check   confere os dois conjuntos"
+	@echo "  mingw32-make tabela-subconjuntos  grava a contagem em docs/"
+	@echo ---------------------------------------------------------------
+	@echo NUMEROS NO TERMINAL, SEM GRAVAR MAPA
+	@echo "  mingw32-make candidato-n1000      cabeamento, N=1000"
+	@echo "  mingw32-make interferencia-n1000  interferencia, N=1000"
+	@echo "  mingw32-make numeros-n1000        os dois de uma vez"
+	@echo "  (N pode ser 10, 20, 30, 40, 100, 500, 1000 ou 5000)"
+	@echo ---------------------------------------------------------------
+	@echo MAPAS .DOT
+	@echo "  mingw32-make fase2-n500      os dois grafos da Fase II, N=500"
+	@echo "  mingw32-make fase2-tudo      todos os tamanhos"
+	@echo "  mingw32-make fase1-nova-n1000  planaridade nos dados novos"
+	@echo "  mingw32-make fase1-nova      planaridade em 100, 500, 1000, 5000"
+	@echo "  mingw32-make dot             planaridade nos dados antigos"
+	@echo "  mingw32-make png             converte os mapas da planaridade"
+	@echo ---------------------------------------------------------------
+	@echo BENCHMARK
+	@echo "  mingw32-make benchmark-lista                     dados antigos"
+	@echo "  mingw32-make benchmark-lista SUBCONJUNTOS=fase2  dados novos"
+	@echo ---------------------------------------------------------------
+	@echo "Para um arquivo fora da lista: DATASET=caminho/do/arquivo.csv"
+	@echo "Variaveis: LIMITE, ESTRUTURA, EXTRA, SUBCONJUNTOS, DATASET"
+	@echo ---------------------------------------------------------------
 
 $(BUILD_DIR):
 	@if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
@@ -240,6 +278,22 @@ tabela-subconjuntos-tela: $(APP)
 #
 # Cada alvo chama o make de novo passando DATASET, em vez de repetir a receita:
 # assim existe um unico lugar que sabe montar a linha de comando do programa.
+# So os numeros no terminal, sem gravar mapa:
+#
+#   mingw32-make candidato-n1000
+#   mingw32-make interferencia-n1000
+candidato-n%:
+	@$(MAKE) --no-print-directory candidato DATASET=$(MODELO_FASE2_N)$*.csv
+
+interferencia-n%:
+	@$(MAKE) --no-print-directory interferencia DATASET=$(MODELO_FASE2_N)$*.csv
+
+# Os numeros dos dois grafos, um embaixo do outro.
+numeros-n%:
+	@$(MAKE) --no-print-directory candidato DATASET=$(MODELO_FASE2_N)$*.csv
+	@$(MAKE) --no-print-directory interferencia DATASET=$(MODELO_FASE2_N)$*.csv
+
+# Com os mapas .dot, alem dos numeros.
 fase2-n%:
 	@$(MAKE) --no-print-directory dot-interferencia DATASET=$(MODELO_FASE2_N)$*.csv
 	@$(MAKE) --no-print-directory dot-candidato DATASET=$(MODELO_FASE2_N)$*.csv
