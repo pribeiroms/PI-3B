@@ -1,3 +1,9 @@
+/* Com -std=c11 o MinGW.org antigo esconde as funcoes fora do padrao C, como o
+ * _wfopen. Liberar so neste arquivo mantem o resto do projeto em C11 estrito. */
+#if defined(__MINGW32__)
+#undef __STRICT_ANSI__
+#endif
+
 #include "utf8io.h"
 
 #include <stdlib.h>

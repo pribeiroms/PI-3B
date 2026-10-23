@@ -1,4 +1,5 @@
 #include <math.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -445,9 +446,11 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
     while ((max_antenas == 0U || carregadas < max_antenas) &&
            fgets(linha, sizeof(linha), arquivo) != NULL) {
         unsigned int mcc, net, area, amostras;
-        unsigned long long cell;
+        /* SCNu64 em vez de %llu: o MinGW.org antigo valida o formato pelas
+         * regras do runtime da Microsoft, que nao aceita %llu. */
+        uint64_t cell;
         double latitude, longitude, alcance;
-        if (sscanf(linha, "%15[^,],%u,%u,%u,%llu,%lf,%lf,%lf,%u", radio, &mcc, &net, &area,
+        if (sscanf(linha, "%15[^,],%u,%u,%u,%" SCNu64 ",%lf,%lf,%lf,%u", radio, &mcc, &net, &area,
                    &cell, &latitude, &longitude, &alcance, &amostras) == 9 &&
             grafo_adicionar_antena(grafo, mcc, net, area, cell, latitude, longitude, alcance) >= 0)
             ++carregadas;

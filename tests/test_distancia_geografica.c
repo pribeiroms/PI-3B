@@ -66,7 +66,9 @@ static void teste_simetria(void)
 {
     CoordenadaGeografica a = em(-22.9068, -43.1729);
     CoordenadaGeografica b = em(-15.7939, -47.8828);
-    assert(grafo_distancia_km(a, b) == grafo_distancia_km(b, a));
+    /* Igualdade exata entre doubles depende do compilador e da libm: a ordem
+     * dos argumentos muda a ultima casa decimal. 1e-9 km e um micrometro. */
+    assert(fabs(grafo_distancia_km(a, b) - grafo_distancia_km(b, a)) < 1e-9);
 }
 
 static void teste_distancias_curtas(void)
