@@ -15,7 +15,9 @@ typedef struct {
     unsigned int mcc;
     unsigned int net;
     unsigned int area;
-    unsigned int cell;
+    /* O identificador de celula do 5G NR tem 36 bits e nao cabe em 32: usar
+     * unsigned int aqui descartava 84% das antenas NR do dataset na leitura. */
+    unsigned long long cell;
     CoordenadaGeografica coordenadas;
     double alcance_metros;
 } Vertice;
@@ -23,12 +25,14 @@ typedef struct {
 typedef struct {
     size_t origem;
     size_t destino;
+    double peso;
 } Aresta;
 
 typedef struct NoAdjacencia NoAdjacencia;
 
 struct NoAdjacencia {
     size_t vertice;
+    double peso;
     NoAdjacencia *proximo;
 };
 
@@ -38,7 +42,8 @@ typedef struct {
 } ListaAdjacencia;
 
 typedef struct {
-    unsigned char *dados;
+    unsigned char *dados;  /* adjacencia, um bit por par de vertices */
+    double *pesos;         /* pesos; NULL ate a primeira aresta com peso */
     size_t ordem;
 } MatrizAdjacencia;
 
@@ -67,13 +72,14 @@ typedef enum {
 Grafo *grafo_criar(void);
 Grafo *grafo_criar_com_estrutura(EstruturaGrafo estrutura);
 void grafo_destruir(Grafo *grafo);
+EstruturaGrafo grafo_estrutura(const Grafo *grafo);
 
 int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice);
 int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
-    unsigned int area, unsigned int cell, double latitude,
+    unsigned int area, unsigned long long cell, double latitude,
     double longitude, double alcance_metros);
 int grafo_adicionar_antena_ex(Grafo *grafo, unsigned int mcc, unsigned int net,
-    unsigned int area, unsigned int cell, double latitude,
+    unsigned int area, unsigned long long cell, double latitude,
     double longitude, double alcance_metros);
 int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino);
 
@@ -119,5 +125,71 @@ int grafo_obter_aresta(const Grafo *grafo, size_t indice_aresta, size_t *origem,
 
 /* Copia os dados de um vertice (antena) pelo indice. Retorna 1 em sucesso. */
 int grafo_obter_vertice(const Grafo *grafo, size_t indice, Vertice *saida);
+
+/* --- Fase II --- */
+
+/* Distancia geodesica entre duas coordenadas, em quilometros.
+ *
+ * Formula de Haversine com raio terrestre de 6.371 km. Esta e a unica
+ * implementacao de distancia do projeto: a construcao das conexoes e a regra
+ * de interferencia derivam dela. A unidade e a justificativa estao em
+ * docs/MODELAGEM_PESOS_FASE2.md (issue #65).
+ *
+ * A funcao e simetrica e devolve 0 para coordenadas iguais. Coordenadas fora
+ * do dominio valido nao sao rejeitadas aqui; a validacao ocorre na carga do
+ * dataset.
+ */
+double grafo_distancia_km(CoordenadaGeografica a, CoordenadaGeografica b);
+
+/* Insere uma aresta com peso, em quilometros.
+ *
+ * O peso e gravado nas tres representacoes mantidas pelo grafo: no vetor de
+ * arestas, nos nos da lista de adjacencia e, quando a estrutura inclui a
+ * matriz, numa matriz de pesos paralela a de adjacencia.
+ *
+ * A matriz de pesos e alocada apenas na primeira aresta com peso diferente de
+ * zero: um grafo sem peso, como o da Fase I, nao paga esse custo. Ela ocupa
+ * ordem x ordem doubles, o que a torna o fator dominante de memoria em grafos
+ * valorados grandes.
+ *
+ * Pesos negativos, infinitos ou NaN sao rejeitados. Laços e arestas repetidas
+ * continuam rejeitados, como em grafo_adicionar_aresta.
+ *
+ * Retorna 1 em sucesso e 0 em erro.
+ */
+int grafo_adicionar_aresta_ponderada(Grafo *grafo, size_t origem,
+    size_t destino, double peso);
+
+/* Consulta o peso da aresta entre dois vertices, em quilometros.
+ *
+ * Usa a representacao ativa: a matriz responde em O(1), a lista em O(grau).
+ * Retorna 0 se a aresta nao existir, e nesse caso nao escreve em peso.
+ */
+int grafo_obter_peso(const Grafo *grafo, size_t origem, size_t destino,
+    double *peso);
+
+/* Obtem origem, destino e peso de uma aresta pelo indice no vetor de arestas.
+ * Qualquer um dos ponteiros de saida pode ser NULL. Retorna 1 em sucesso.
+ *
+ * E a forma indicada de percorrer as arestas para ordena-las, como faz o
+ * Kruskal.
+ */
+int grafo_obter_aresta_ponderada(const Grafo *grafo, size_t indice_aresta,
+    size_t *origem, size_t *destino, double *peso);
+
+/* Soma dos pesos de todas as arestas, em quilometros. Em uma arvore geradora,
+ * e a metragem total de cabo do traçado. */
+double grafo_peso_total(const Grafo *grafo);
+
+/* Conta os componentes conexos por travessia em profundidade.
+ *
+ * Vertices isolados contam um componente cada, e um grafo sem vertices tem
+ * zero componentes. O resultado indica quantas arvores o Kruskal produzira:
+ * mais de um componente significa floresta geradora minima, nao arvore.
+ *
+ * Usa a estrutura ativa: lista em O(V + E), matriz em O(V^2). Retorna 1 em
+ * sucesso e 0 para entrada invalida ou falha de alocacao.
+ */
+int grafo_contar_componentes(const Grafo *grafo, size_t *componentes);
 
 #endif

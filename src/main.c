@@ -3,8 +3,15 @@
 #include <time.h>
 
 #include "analise_planaridade.h"
+#include "candidato_fibra.h"
 #include "execucao.h"
 #include "exportar_dot.h"
+#include "interferencia.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#include <shellapi.h>
+#endif
 
 static double decorrido_ms(clock_t inicio, clock_t fim)
 {
@@ -21,7 +28,124 @@ static const char *nome_estrutura(EstruturaGrafo estrutura)
     }
 }
 
-int main(int argc, char *argv[])
+/* Modo --candidato: constroi o grafo de rotas possiveis de fibra e relata o
+ * que a issue #68 pede. A quantidade de componentes conexos e o indicador de
+ * calibracao de k e do raio, conforme docs/MODELAGEM_PESOS_FASE2.md.
+ * Retorna o codigo de saida do programa. */
+static int executar_candidato(Grafo *grafo, const OpcoesExecucao *opcoes,
+                              double leitura_ms)
+{
+    RelatorioCandidatoFibra relatorio;
+    clock_t inicio, fim;
+
+    inicio = clock();
+    if (!candidato_fibra_construir(grafo, opcoes->candidato, &relatorio)) {
+        fputs("Erro ao construir o grafo candidato de cabeamento. Verifique "
+              "os parametros e a memoria disponivel.\n", stderr);
+        grafo_destruir(grafo);
+        return 1;
+    }
+    fim = clock();
+    printf("\nGrafo candidato de cabeamento (Fase II)\n"
+        "Criterio: k = %zu vizinhos mais proximos, raio maximo de %.3f km\n"
+        "Vertices: %zu\nArestas: %zu\nComponentes conexos: %zu\n"
+        "Antenas sem rota candidata: %zu\n"
+        "Soma das rotas candidatas: %.4f km\nMaior rota candidata: %.4f km\n"
+        "Tempos de CPU em ms (-1 = indisponivel):\nLeitura: %.3f\n"
+        "Construcao: %.3f\n",
+        opcoes->candidato.k, opcoes->candidato.raio_maximo_km,
+        relatorio.vertices, relatorio.arestas, relatorio.componentes,
+        relatorio.vertices_isolados, relatorio.peso_total_km,
+        relatorio.maior_aresta_km, leitura_ms, decorrido_ms(inicio, fim));
+    if (relatorio.componentes > 1U)
+        puts("Aviso: o grafo tem mais de um componente conexo; o Kruskal "
+             "produzira uma floresta geradora minima, uma arvore por "
+             "componente.");
+    puts("A soma acima considera todas as rotas candidatas, nao a arvore "
+         "geradora minima: a metragem de fibra sai do Kruskal (#74).");
+    /* O grafo candidato nao passou pelo detector de cruzamentos: essa analise
+     * e da #76, sobre a arvore geradora minima. Por isso o mapa sai sem
+     * destaques em vermelho. */
+    if (opcoes->dot != NULL) {
+        if (exportar_dot(grafo, NULL, 0U, opcoes->dot))
+            printf("Mapa do grafo candidato exportado em: %s\n", opcoes->dot);
+        else
+            fprintf(stderr, "Erro ao exportar o grafo candidato em %s. "
+                "Verifique o diretorio e as permissoes.\n", opcoes->dot);
+    }
+    if (opcoes->dot_mapa != NULL) {
+        size_t gravados = exportar_dot_mapas(grafo, NULL, 0U, opcoes->dot_mapa);
+        if (gravados > 0U)
+            printf("Recortes do grafo candidato exportados: %zu arquivo(s) a "
+                "partir de %s\n", gravados, opcoes->dot_mapa);
+        else
+            fprintf(stderr, "Erro ao exportar os recortes do grafo candidato "
+                "em %s. Verifique o diretorio e as permissoes.\n",
+                opcoes->dot_mapa);
+    }
+    grafo_destruir(grafo);
+    return 0;
+}
+
+/* Modo --interferencia: constroi o grafo de interferencia entre torres e
+ * relata o que a issue #69 pede -- vertices, arestas e grau maximo. O grau
+ * maximo e o indicador que importa para a trilha da coloracao: a coloracao
+ * gulosa usa no maximo Delta + 1 cores, logo esse valor e o limite superior de
+ * canais de radio. Retorna o codigo de saida do programa. */
+static int executar_interferencia(Grafo *grafo, const OpcoesExecucao *opcoes,
+                                  double leitura_ms)
+{
+    RelatorioInterferencia relatorio;
+    clock_t inicio, fim;
+
+    inicio = clock();
+    if (!interferencia_construir(grafo, &relatorio)) {
+        fputs("Erro ao construir o grafo de interferencia. Verifique a "
+              "memoria disponivel.\n", stderr);
+        grafo_destruir(grafo);
+        return 1;
+    }
+    fim = clock();
+    printf("\nGrafo de interferencia entre torres (Fase II)\n"
+        "Criterio: mesma operadora (mcc, net e area) e distancia menor ou "
+        "igual a soma dos alcances\n"
+        "Vertices: %zu\nArestas: %zu\n"
+        "Grau maximo (Delta): %zu, na antena de indice %zu\n"
+        "Limite superior de canais de radio (Delta + 1): %zu\n"
+        "Antenas sem interferencia: %zu\n"
+        "Tempos de CPU em ms (-1 = indisponivel):\nLeitura: %.3f\n"
+        "Construcao: %.3f\n",
+        relatorio.vertices, relatorio.arestas, relatorio.grau_maximo,
+        relatorio.vertice_grau_maximo, relatorio.grau_maximo + 1U,
+        relatorio.vertices_isolados, leitura_ms, decorrido_ms(inicio, fim));
+    puts("O limite acima e o pior caso da coloracao gulosa; a quantidade de "
+         "canais efetivamente usada sai da coloracao (#79).");
+    /* O grafo de interferencia nao passa pelo detector de cruzamentos: as
+     * arestas aqui representam sobreposicao de sinal, nao cabo enterrado, e
+     * cruzar no mapa nao custa nada. Por isso o mapa sai sem destaques. */
+    if (opcoes->dot != NULL) {
+        if (exportar_dot(grafo, NULL, 0U, opcoes->dot))
+            printf("Mapa do grafo de interferencia exportado em: %s\n",
+                opcoes->dot);
+        else
+            fprintf(stderr, "Erro ao exportar o grafo de interferencia em %s. "
+                "Verifique o diretorio e as permissoes.\n", opcoes->dot);
+    }
+    if (opcoes->dot_mapa != NULL) {
+        size_t gravados = exportar_dot_mapas(grafo, NULL, 0U, opcoes->dot_mapa);
+        if (gravados > 0U)
+            printf("Recortes do grafo de interferencia exportados: %zu "
+                "arquivo(s) a partir de %s\n", gravados, opcoes->dot_mapa);
+        else
+            fprintf(stderr, "Erro ao exportar os recortes do grafo de "
+                "interferencia em %s. Verifique o diretorio e as "
+                "permissoes.\n", opcoes->dot_mapa);
+    }
+    grafo_destruir(grafo);
+    return 0;
+}
+
+static int executar(int argc, char *argv[])
 {
     OpcoesExecucao opcoes;
     ResultadoExecucao resultado = {0};
@@ -59,6 +183,10 @@ int main(int argc, char *argv[])
         grafo_destruir(grafo);
         return 1;
     }
+    if (opcoes.modo == EXECUCAO_MODO_CANDIDATO)
+        return executar_candidato(grafo, &opcoes, resultado.leitura_ms);
+    if (opcoes.modo == EXECUCAO_MODO_INTERFERENCIA)
+        return executar_interferencia(grafo, &opcoes, resultado.leitura_ms);
     inicio = clock();
     if (!grafo_construir_conexoes_ex(grafo, &resultado.arestas)) {
         fputs("Erro ao construir conexoes do grafo (memoria insuficiente).\n", stderr);
@@ -134,9 +262,9 @@ int main(int argc, char *argv[])
     } else {
         puts("Estimativa de memoria: indisponivel (overflow ou entrada invalida).");
     }
-    analise_planaridade_exibir(stdout, resultado.vertices, resultado.arestas,
+        analise_planaridade_exibir(stdout, resultado.vertices, resultado.arestas,
         resultado.euler, resultado.possui_cruzamentos,
-        &resultado.quantidade_cruzamentos);
+        &resultado.quantidade_cruzamentos, NULL);
     if (!execucao_salvar(&opcoes, &resultado)) {
         fprintf(stderr, "Erro ao salvar resultados em %s. Verifique o diretorio, "
             "as permissoes e se o arquivo possui o cabecalho esperado.\n", opcoes.saida);
@@ -145,3 +273,73 @@ int main(int argc, char *argv[])
     printf("Resultados acrescentados em: %s\n", opcoes.saida);
     return 0;
 }
+
+#ifdef _WIN32
+
+/* No Windows, o char *argv[] que o C entrega ja vem recodificado pela CRT
+ * na code page ANSI do sistema. Para caminhos com acentos (ex.: um projeto
+ * dentro de "...\Area de Trabalho\..."), essa recodificacao nao bate com o
+ * UTF-16 que o PowerShell usa internamente nem com o UTF-8 que o restante
+ * do programa espera -- causando falha ao abrir o dataset e divergencia
+ * nos caminhos gravados no CSV de resultados.
+ *
+ * Para evitar isso, ignoramos o argv ja convertido e buscamos os
+ * argumentos originais em UTF-16 diretamente do sistema, convertendo-os
+ * para UTF-8 nos mesmos. Dessa forma o restante do programa (e o arquivo
+ * CSV gravado) trabalha sempre em UTF-8, de forma consistente.
+ */
+int main(void)
+{
+    LPWSTR *wargv;
+    int wargc;
+    int i;
+    char **argv_utf8;
+    int status;
+
+    wargv = CommandLineToArgvW(GetCommandLineW(), &wargc);
+    if (wargv == NULL) {
+        fputs("Erro ao obter os argumentos da linha de comando.\n", stderr);
+        return 1;
+    }
+
+    argv_utf8 = (char **)malloc((size_t)wargc * sizeof(char *));
+    if (argv_utf8 == NULL) {
+        fputs("Erro: memoria insuficiente para converter os argumentos.\n", stderr);
+        LocalFree(wargv);
+        return 1;
+    }
+
+    for (i = 0; i < wargc; ++i) {
+        int tamanho = WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, NULL, 0,
+            NULL, NULL);
+        if (tamanho <= 0) {
+            fputs("Erro ao converter os argumentos para UTF-8.\n", stderr);
+            LocalFree(wargv);
+            return 1;
+        }
+        argv_utf8[i] = (char *)malloc((size_t)tamanho);
+        if (argv_utf8[i] == NULL) {
+            fputs("Erro: memoria insuficiente para converter os argumentos.\n", stderr);
+            LocalFree(wargv);
+            return 1;
+        }
+        WideCharToMultiByte(CP_UTF8, 0, wargv[i], -1, argv_utf8[i], tamanho,
+            NULL, NULL);
+    }
+    LocalFree(wargv);
+
+    status = executar(wargc, argv_utf8);
+
+    for (i = 0; i < wargc; ++i) free(argv_utf8[i]);
+    free(argv_utf8);
+    return status;
+}
+
+#else
+
+int main(int argc, char *argv[])
+{
+    return executar(argc, argv);
+}
+
+#endif

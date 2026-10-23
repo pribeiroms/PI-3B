@@ -10,7 +10,7 @@ static void verificar(ResultadoEuler euler, int possui, const size_t *quantidade
     size_t lidos;
     FILE *saida = fopen("build/test_relatorio_planaridade.tmp", "w+b");
     assert(saida != NULL);
-    analise_planaridade_exibir(saida, 5U, 10U, euler, possui, quantidade);
+    analise_planaridade_exibir(saida, 5U, 10U, euler, possui, quantidade, NULL);
     rewind(saida);
     lidos = fread(texto, 1U, sizeof(texto) - 1U, saida);
     assert(!ferror(saida));
@@ -21,8 +21,39 @@ static void verificar(ResultadoEuler euler, int possui, const size_t *quantidade
     assert(strstr(texto, conclusao) != NULL);
     assert(strstr(texto, "nao constitui um teste completo de planaridade") != NULL);
     assert(strstr(texto, "consolidacao parcial") == NULL);
+    /* Sem detalhamento informado, a secao nao aparece. */
+    assert(strstr(texto, "Detalhamento dos cruzamentos") == NULL);
     fclose(saida);
     assert(remove("build/test_relatorio_planaridade.tmp") == 0);
+}
+
+/* O detalhamento, quando informado, sai logo apos a quantidade e antes da
+ * conclusao. */
+static void verificar_detalhamento(void)
+{
+    const char *detalhamento =
+        "  Aresta 21 (antenas 76-77) x Aresta 62 (antenas 140-136)\n";
+    char texto[4096];
+    size_t lidos, posicao_quantidade, posicao_detalhe, posicao_conclusao;
+    size_t tres = 3U;
+    FILE *saida = fopen("build/test_relatorio_detalhe.tmp", "w+b");
+
+    assert(saida != NULL);
+    analise_planaridade_exibir(saida, 5U, 10U, EULER_INCONCLUSIVO, 1, &tres,
+        detalhamento);
+    rewind(saida);
+    lidos = fread(texto, 1U, sizeof(texto) - 1U, saida);
+    assert(!ferror(saida));
+    texto[lidos] = '\0';
+    assert(strstr(texto, "Detalhamento dos cruzamentos:") != NULL);
+    assert(strstr(texto, "Aresta 21 (antenas 76-77)") != NULL);
+    posicao_quantidade = (size_t)(strstr(texto, "Quantidade de cruzamentos") - texto);
+    posicao_detalhe = (size_t)(strstr(texto, "Detalhamento dos cruzamentos") - texto);
+    posicao_conclusao = (size_t)(strstr(texto, "Conclusao:") - texto);
+    assert(posicao_quantidade < posicao_detalhe);
+    assert(posicao_detalhe < posicao_conclusao);
+    fclose(saida);
+    assert(remove("build/test_relatorio_detalhe.tmp") == 0);
 }
 
 int main(void)
@@ -36,6 +67,7 @@ int main(void)
         "Quantidade de cruzamentos: 3", "rede nao admite uma representacao plana");
     verificar(EULER_NAO_APLICAVEL, 0, &zero, "nao aplicavel",
         "Quantidade de cruzamentos: 0", "detector atual nao encontrou");
+    verificar_detalhamento();
     puts("Testes do relatorio de planaridade passaram.");
     return 0;
 }

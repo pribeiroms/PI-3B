@@ -1,4 +1,5 @@
 #include <math.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -6,7 +7,7 @@
 #include <string.h>
 
 #include "grafo.h"
-
+#include "utf8io.h"
 struct Grafo {
     EstruturaGrafo estrutura;
     Vertice *vertices;
@@ -53,6 +54,35 @@ static void matriz_definir_aresta(MatrizAdjacencia *matriz, size_t origem,
         destino / CHAR_BIT;
     unsigned char mascara = (unsigned char)(1U << (destino % CHAR_BIT));
     matriz->dados[indice] |= mascara;
+}
+
+/* Garante que a matriz de pesos exista. Ela so e alocada quando aparece a
+ * primeira aresta com peso, para que um grafo sem peso nao pague ordem x ordem
+ * doubles. */
+static int matriz_garantir_pesos(MatrizAdjacencia *matriz)
+{
+    size_t celulas;
+    if (matriz->pesos != NULL) return 1;
+    if (matriz->ordem == 0U) return 0;
+    if (matriz->ordem > SIZE_MAX / matriz->ordem) return 0;
+    celulas = matriz->ordem * matriz->ordem;
+    if (celulas > SIZE_MAX / sizeof(*matriz->pesos)) return 0;
+    matriz->pesos = calloc(celulas, sizeof(*matriz->pesos));
+    return matriz->pesos != NULL;
+}
+
+static void matriz_definir_peso(MatrizAdjacencia *matriz, size_t origem,
+                                size_t destino, double peso)
+{
+    matriz->pesos[origem * matriz->ordem + destino] = peso;
+    matriz->pesos[destino * matriz->ordem + origem] = peso;
+}
+
+static double matriz_obter_peso(const MatrizAdjacencia *matriz, size_t origem,
+                                size_t destino)
+{
+    if (matriz->pesos == NULL) return 0.0;
+    return matriz->pesos[origem * matriz->ordem + destino];
 }
 
 static int dobrar_capacidade(size_t atual, size_t inicial, size_t *nova)
@@ -126,6 +156,21 @@ static int expandir_adjacencia(Grafo *grafo)
         }
         free(grafo->matriz_adjacencia.dados);
         grafo->matriz_adjacencia.dados = dados;
+        if (grafo->matriz_adjacencia.pesos != NULL) {
+            double *pesos;
+            size_t celulas;
+            if (nova_ordem > SIZE_MAX / nova_ordem) return 0;
+            celulas = nova_ordem * nova_ordem;
+            if (celulas > SIZE_MAX / sizeof(*pesos)) return 0;
+            pesos = calloc(celulas, sizeof(*pesos));
+            if (pesos == NULL) return 0;
+            for (linha = 0U; linha < ordem_matriz; ++linha)
+                memcpy(&pesos[linha * nova_ordem],
+                       &grafo->matriz_adjacencia.pesos[linha * ordem_matriz],
+                       ordem_matriz * sizeof(*pesos));
+            free(grafo->matriz_adjacencia.pesos);
+            grafo->matriz_adjacencia.pesos = pesos;
+        }
         grafo->matriz_adjacencia.ordem = nova_ordem;
     }
     return 1;
@@ -165,9 +210,15 @@ void grafo_destruir(Grafo *grafo)
         liberar_lista(grafo->lista_adjacencia.listas[indice]);
     free(grafo->lista_adjacencia.listas);
     free(grafo->matriz_adjacencia.dados);
+    free(grafo->matriz_adjacencia.pesos);
     free(grafo->vertices);
     free(grafo->arestas);
     free(grafo);
+}
+
+EstruturaGrafo grafo_estrutura(const Grafo *grafo)
+{
+    return grafo == NULL ? GRAFO_ESTRUTURA_CONJUNTA : grafo->estrutura;
 }
 
 int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice)
@@ -196,7 +247,7 @@ int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice)
 }
 
 int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
-                           unsigned int area, unsigned int cell, double latitude,
+                           unsigned int area, unsigned long long cell, double latitude,
                            double longitude, double alcance_metros)
 {
 	if (grafo_adicionar_antena_ex(grafo, mcc, net, area, cell, latitude,
@@ -205,7 +256,7 @@ int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
 }
 
 int grafo_adicionar_antena_ex(Grafo *grafo, unsigned int mcc, unsigned int net,
-						      unsigned int area, unsigned int cell, double latitude,
+						      unsigned int area, unsigned long long cell, double latitude,
 						      double longitude, double alcance_metros)
 {
     Vertice vertice = {0U, mcc, net, area, cell, {latitude, longitude}, alcance_metros};
@@ -215,7 +266,8 @@ int grafo_adicionar_antena_ex(Grafo *grafo, unsigned int mcc, unsigned int net,
     return grafo_adicionar_vertice(grafo, vertice) < 0 ? -1 : 1;
 }
 
-int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
+int grafo_adicionar_aresta_ponderada(Grafo *grafo, size_t origem,
+                                     size_t destino, double peso)
 {
     NoAdjacencia *origem_no = NULL;
     NoAdjacencia *destino_no = NULL;
@@ -223,8 +275,13 @@ int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
     if (grafo == NULL || origem == destino || origem >= grafo->quantidade_vertices ||
         destino >= grafo->quantidade_vertices || grafo_sao_adjacentes(grafo, origem, destino))
         return 0;
+    if (!isfinite(peso) || peso < 0.0) return 0;
     if (grafo->quantidade_arestas == grafo->capacidade_arestas && !reservar_arestas(grafo))
         return 0;
+    /* A matriz de pesos e reservada antes de qualquer alteracao, para que uma
+     * falha de alocacao nao deixe o grafo pela metade. */
+    if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA && peso != 0.0 &&
+        !matriz_garantir_pesos(&grafo->matriz_adjacencia)) return 0;
     if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
         origem_no = malloc(sizeof(*origem_no));
         destino_no = malloc(sizeof(*destino_no));
@@ -234,8 +291,10 @@ int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
             return 0;
         }
         origem_no->vertice = destino;
+        origem_no->peso = peso;
         origem_no->proximo = grafo->lista_adjacencia.listas[origem];
         destino_no->vertice = origem;
+        destino_no->peso = peso;
         destino_no->proximo = grafo->lista_adjacencia.listas[destino];
         grafo->lista_adjacencia.listas[origem] = origem_no;
         grafo->lista_adjacencia.listas[destino] = destino_no;
@@ -243,10 +302,122 @@ int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
     if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
         matriz_definir_aresta(&grafo->matriz_adjacencia, origem, destino);
         matriz_definir_aresta(&grafo->matriz_adjacencia, destino, origem);
+        if (grafo->matriz_adjacencia.pesos != NULL)
+            matriz_definir_peso(&grafo->matriz_adjacencia, origem, destino, peso);
     }
     grafo->arestas[grafo->quantidade_arestas].origem = origem;
     grafo->arestas[grafo->quantidade_arestas].destino = destino;
+    grafo->arestas[grafo->quantidade_arestas].peso = peso;
     ++grafo->quantidade_arestas;
+    return 1;
+}
+
+/* Arestas sem peso, como as da Fase I, entram com peso zero. */
+int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
+{
+    return grafo_adicionar_aresta_ponderada(grafo, origem, destino, 0.0);
+}
+
+int grafo_obter_peso(const Grafo *grafo, size_t origem, size_t destino,
+                     double *peso)
+{
+    const NoAdjacencia *vizinho;
+
+    if (grafo == NULL || peso == NULL || origem >= grafo->quantidade_vertices ||
+        destino >= grafo->quantidade_vertices || origem == destino) return 0;
+    if (grafo->estrutura != GRAFO_LISTA_ADJACENCIA) {
+        if (!matriz_tem_aresta(&grafo->matriz_adjacencia, origem, destino))
+            return 0;
+        *peso = matriz_obter_peso(&grafo->matriz_adjacencia, origem, destino);
+        return 1;
+    }
+    for (vizinho = grafo->lista_adjacencia.listas[origem]; vizinho != NULL;
+         vizinho = vizinho->proximo)
+        if (vizinho->vertice == destino) {
+            *peso = vizinho->peso;
+            return 1;
+        }
+    return 0;
+}
+
+int grafo_obter_aresta_ponderada(const Grafo *grafo, size_t indice_aresta,
+                                 size_t *origem, size_t *destino, double *peso)
+{
+    if (grafo == NULL || indice_aresta >= grafo->quantidade_arestas) return 0;
+    if (origem != NULL) *origem = grafo->arestas[indice_aresta].origem;
+    if (destino != NULL) *destino = grafo->arestas[indice_aresta].destino;
+    if (peso != NULL) *peso = grafo->arestas[indice_aresta].peso;
+    return 1;
+}
+
+double grafo_peso_total(const Grafo *grafo)
+{
+    size_t i;
+    double total = 0.0;
+    if (grafo == NULL) return 0.0;
+    for (i = 0U; i < grafo->quantidade_arestas; ++i)
+        total += grafo->arestas[i].peso;
+    return total;
+}
+
+/* Empilha os vizinhos ainda nao visitados de um vertice. A pilha tem uma
+ * posicao por vertice e cada vertice e marcado antes de entrar, de modo que
+ * nunca entra duas vezes e a pilha nunca transborda. */
+static void empilhar_vizinhos(const Grafo *grafo, size_t vertice,
+                              unsigned char *visitado, size_t *pilha,
+                              size_t *topo)
+{
+    if (grafo->estrutura != GRAFO_MATRIZ_ADJACENCIA) {
+        const NoAdjacencia *vizinho;
+        for (vizinho = grafo->lista_adjacencia.listas[vertice]; vizinho != NULL;
+             vizinho = vizinho->proximo)
+            if (!visitado[vizinho->vertice]) {
+                visitado[vizinho->vertice] = 1U;
+                pilha[(*topo)++] = vizinho->vertice;
+            }
+        return;
+    }
+    {
+        size_t candidato;
+        for (candidato = 0U; candidato < grafo->quantidade_vertices; ++candidato)
+            if (candidato != vertice && !visitado[candidato] &&
+                matriz_tem_aresta(&grafo->matriz_adjacencia, vertice, candidato)) {
+                visitado[candidato] = 1U;
+                pilha[(*topo)++] = candidato;
+            }
+    }
+}
+
+int grafo_contar_componentes(const Grafo *grafo, size_t *componentes)
+{
+    unsigned char *visitado;
+    size_t *pilha;
+    size_t bytes_pilha, inicio, topo, total = 0U;
+
+    if (grafo == NULL || componentes == NULL) return 0;
+    *componentes = 0U;
+    if (grafo->quantidade_vertices == 0U) return 1;
+    if (!tamanho_array(grafo->quantidade_vertices, sizeof(*pilha), &bytes_pilha))
+        return 0;
+    visitado = calloc(grafo->quantidade_vertices, sizeof(*visitado));
+    pilha = malloc(bytes_pilha);
+    if (visitado == NULL || pilha == NULL) {
+        free(visitado);
+        free(pilha);
+        return 0;
+    }
+    for (inicio = 0U; inicio < grafo->quantidade_vertices; ++inicio) {
+        if (visitado[inicio]) continue;
+        ++total;
+        visitado[inicio] = 1U;
+        pilha[0] = inicio;
+        topo = 1U;
+        while (topo > 0U)
+            empilhar_vizinhos(grafo, pilha[--topo], visitado, pilha, &topo);
+    }
+    free(visitado);
+    free(pilha);
+    *componentes = total;
     return 1;
 }
 
@@ -259,7 +430,7 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
 
     if (erro != NULL && tamanho_erro > 0U) erro[0] = '\0';
     if (grafo == NULL || caminho == NULL) return 0U;
-    arquivo = fopen(caminho, "r");
+    arquivo = utf8_fopen(caminho, "r");
     if (arquivo == NULL) {
         if (erro != NULL && tamanho_erro > 0U)
             snprintf(erro, tamanho_erro, "Nao foi possivel abrir o CSV.");
@@ -274,9 +445,12 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
     }
     while ((max_antenas == 0U || carregadas < max_antenas) &&
            fgets(linha, sizeof(linha), arquivo) != NULL) {
-        unsigned int mcc, net, area, cell, amostras;
+        unsigned int mcc, net, area, amostras;
+        /* SCNu64 em vez de %llu: o MinGW.org antigo valida o formato pelas
+         * regras do runtime da Microsoft, que nao aceita %llu. */
+        uint64_t cell;
         double latitude, longitude, alcance;
-        if (sscanf(linha, "%15[^,],%u,%u,%u,%u,%lf,%lf,%lf,%u", radio, &mcc, &net, &area,
+        if (sscanf(linha, "%15[^,],%u,%u,%u,%" SCNu64 ",%lf,%lf,%lf,%u", radio, &mcc, &net, &area,
                    &cell, &latitude, &longitude, &alcance, &amostras) == 9 &&
             grafo_adicionar_antena(grafo, mcc, net, area, cell, latitude, longitude, alcance) >= 0)
             ++carregadas;
@@ -285,17 +459,25 @@ size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
     return carregadas;
 }
 
-static double distancia_metros(const Vertice *a, const Vertice *b)
+double grafo_distancia_km(CoordenadaGeografica a, CoordenadaGeografica b)
 {
     const double radianos = 0.017453292519943295;
-    const double raio_terra = 6371000.0;
-    double dlat = (b->coordenadas.latitude - a->coordenadas.latitude) * radianos;
-    double dlon = (b->coordenadas.longitude - a->coordenadas.longitude) * radianos;
+    const double raio_terra_km = 6371.0;
+    double dlat = (b.latitude - a.latitude) * radianos;
+    double dlon = (b.longitude - a.longitude) * radianos;
     double seno_lat = sin(dlat / 2.0);
     double seno_lon = sin(dlon / 2.0);
-    double x = seno_lat * seno_lat + cos(a->coordenadas.latitude * radianos) *
-               cos(b->coordenadas.latitude * radianos) * seno_lon * seno_lon;
-    return raio_terra * 2.0 * atan2(sqrt(x), sqrt(1.0 - x));
+    double x = seno_lat * seno_lat + cos(a.latitude * radianos) *
+               cos(b.latitude * radianos) * seno_lon * seno_lon;
+    return raio_terra_km * 2.0 * atan2(sqrt(x), sqrt(1.0 - x));
+}
+
+/* A construcao das conexoes compara distancias com o alcance das antenas, que
+ * o dataset informa em metros. Deriva da funcao em quilometros para que exista
+ * uma unica implementacao de distancia no projeto. */
+static double distancia_metros(const Vertice *a, const Vertice *b)
+{
+    return grafo_distancia_km(a->coordenadas, b->coordenadas) * 1000.0;
 }
 
 int grafo_construir_conexoes_ex(Grafo *grafo, size_t *arestas_construidas)
@@ -317,6 +499,11 @@ int grafo_construir_conexoes_ex(Grafo *grafo, size_t *arestas_construidas)
         size_t bytes_matriz;
         if (!tamanho_matriz(grafo->matriz_adjacencia.ordem, &bytes_matriz)) return 0;
         memset(grafo->matriz_adjacencia.dados, 0, bytes_matriz);
+        if (grafo->matriz_adjacencia.pesos != NULL)
+            memset(grafo->matriz_adjacencia.pesos, 0,
+                grafo->matriz_adjacencia.ordem *
+                grafo->matriz_adjacencia.ordem *
+                sizeof(*grafo->matriz_adjacencia.pesos));
     }
     grafo->quantidade_arestas = 0U;
     {
@@ -563,8 +750,13 @@ static int multiplicar_bytes(size_t quantidade, size_t tamanho, size_t *resultad
 int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa)
 {
     size_t vertices_bytes, arestas_bytes, listas_bytes, nos_bytes;
-    size_t matriz_bytes, comum, lista_total, matriz_total;
+    size_t matriz_bytes, pesos_bytes = 0U, comum, lista_total, matriz_total;
     if (grafo == NULL || estimativa == NULL) return 0;
+    if (grafo->matriz_adjacencia.pesos != NULL &&
+        (!multiplicar_bytes(grafo->matriz_adjacencia.ordem,
+            grafo->matriz_adjacencia.ordem, &pesos_bytes) ||
+         !multiplicar_bytes(pesos_bytes,
+            sizeof(*grafo->matriz_adjacencia.pesos), &pesos_bytes))) return 0;
     if (!multiplicar_bytes(grafo->capacidade_vertices, sizeof(*grafo->vertices),
             &vertices_bytes) ||
         !multiplicar_bytes(grafo->capacidade_arestas, sizeof(*grafo->arestas),
@@ -574,6 +766,7 @@ int grafo_estimar_memoria(const Grafo *grafo, EstimativaMemoriaGrafo *estimativa
         !multiplicar_bytes(grafo->quantidade_arestas, 2U * sizeof(NoAdjacencia),
             &nos_bytes) ||
         !tamanho_matriz(grafo->matriz_adjacencia.ordem, &matriz_bytes) ||
+        !somar_bytes(matriz_bytes, pesos_bytes, &matriz_bytes) ||
         !somar_bytes(sizeof(*grafo), vertices_bytes, &comum) ||
         !somar_bytes(comum, arestas_bytes, &comum) ||
         !somar_bytes(comum, listas_bytes, &lista_total) ||

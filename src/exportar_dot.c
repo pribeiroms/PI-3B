@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "exportar_dot.h"
-
+#include "utf8io.h"
 /* Lado do desenho, em polegadas. Todos os recortes usam o mesmo lado: o que
  * muda e a area geografica que cabe nele. */
 #define LADO_MAPA 36.0
@@ -346,7 +346,7 @@ static int escrever_vertices(FILE *arquivo, const Grafo *grafo,
                 "fontcolor=\"#ffffff\", penwidth=0.8, width=%.4f",
                 largura * 2.0);
         }
-        fprintf(arquivo, ", tooltip=\"antena %zu | celula %u | mcc %u net %u "
+        fprintf(arquivo, ", tooltip=\"antena %zu | celula %llu | mcc %u net %u "
             "area %u | lat %.4f lon %.4f | alcance %.0f m%s\"];\n",
             i, vertice.cell, vertice.mcc, vertice.net, vertice.area,
             vertice.coordenadas.latitude, vertice.coordenadas.longitude,
@@ -411,7 +411,7 @@ static int gravar_mapa(const Grafo *grafo, const Cruzamento *cruzamentos,
     largura = tamanho_por_quantidade ? largura_por_quantidade(exibidos)
         : largura_vertice(grafo, &selecao, escala, maior);
 
-    arquivo = fopen(caminho, "w");
+    arquivo = utf8_fopen(caminho, "w");
     if (arquivo == NULL) {
         selecao_liberar(&selecao);
         return 0;
