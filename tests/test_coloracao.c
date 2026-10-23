@@ -25,6 +25,24 @@ static Grafo *montar(EstruturaGrafo estrutura, size_t vertices,
     return grafo;
 }
 
+static void verificar_ordem(EstruturaGrafo estrutura, OrdemColoracao ordem,
+    size_t vertices, const size_t (*arestas)[2], size_t quantidade_arestas,
+    const size_t *cores_esperadas, size_t total_esperado)
+{
+    Grafo *grafo = montar(estrutura, vertices, arestas, quantidade_arestas);
+    ResultadoColoracao resultado;
+    size_t i;
+
+    assert(coloracao_gulosa_ordem(grafo, ordem, &resultado) == 1);
+    assert(resultado.quantidade_vertices == vertices);
+    assert(resultado.total_cores == total_esperado);
+    for (i = 0U; i < vertices; ++i) assert(resultado.cores[i] == cores_esperadas[i]);
+    assert(coloracao_valida(grafo, &resultado) == 1);
+    coloracao_liberar(&resultado);
+    assert(resultado.cores == NULL && resultado.total_cores == 0U);
+    grafo_destruir(grafo);
+}
+
 static void verificar(EstruturaGrafo estrutura, size_t vertices,
     const size_t (*arestas)[2], size_t quantidade_arestas,
     const size_t *cores_esperadas, size_t total_esperado)
@@ -33,14 +51,14 @@ static void verificar(EstruturaGrafo estrutura, size_t vertices,
     ResultadoColoracao resultado;
     size_t i;
 
+    /* coloracao_gulosa continua equivalente a ordem natural. */
     assert(coloracao_gulosa(grafo, &resultado) == 1);
-    assert(resultado.quantidade_vertices == vertices);
     assert(resultado.total_cores == total_esperado);
     for (i = 0U; i < vertices; ++i) assert(resultado.cores[i] == cores_esperadas[i]);
-    assert(coloracao_valida(grafo, &resultado) == 1);
     coloracao_liberar(&resultado);
-    assert(resultado.cores == NULL && resultado.total_cores == 0U);
     grafo_destruir(grafo);
+    verificar_ordem(estrutura, COLORACAO_ORDEM_NATURAL, vertices, arestas,
+        quantidade_arestas, cores_esperadas, total_esperado);
 }
 
 static void teste_casos(EstruturaGrafo estrutura)
@@ -69,6 +87,46 @@ static void teste_casos(EstruturaGrafo estrutura)
     verificar(estrutura, 6U, coroa, 6U, cores_coroa, 3U);
 }
 
+/* Caminho 0-1-3-2-4 mais o vertice isolado 5: a ordem natural colore 0 e 2
+ * primeiro, ambos com a cor 0, e forca o vertice 3 a usar uma terceira cor.
+ * Welsh-Powell visita 1, 2, 3, 0, 4, 5 e resolve com duas cores.
+ */
+static void teste_welsh_powell(EstruturaGrafo estrutura)
+{
+    static const size_t arestas[][2] = {{0U, 1U}, {1U, 3U}, {2U, 3U}, {2U, 4U}};
+    static const size_t graus_esperados[] = {1U, 2U, 2U, 2U, 1U, 0U};
+    static const size_t ordem_esperada[] = {1U, 2U, 3U, 0U, 4U, 5U};
+    static const size_t cores_natural[] = {0U, 1U, 0U, 2U, 1U, 0U};
+    static const size_t cores_welsh_powell[] = {1U, 0U, 0U, 1U, 1U, 0U};
+    static const size_t triangulo[][2] = {{0U, 1U}, {1U, 2U}, {0U, 2U}};
+    static const size_t cores_triangulo[] = {0U, 1U, 2U};
+    /* Estrela com centro no ultimo vertice: Welsh-Powell o visita primeiro. */
+    static const size_t estrela[][2] = {{0U, 3U}, {1U, 3U}, {2U, 3U}};
+    static const size_t cores_estrela[] = {1U, 1U, 1U, 0U};
+    Grafo *grafo = montar(estrutura, 6U, arestas, 4U);
+    size_t graus[6], ordem[6], i;
+    ComparacaoColoracao comparacao;
+
+    assert(coloracao_calcular_graus(grafo, graus) == 1);
+    assert(coloracao_ordem_welsh_powell(grafo, ordem) == 1);
+    for (i = 0U; i < 6U; ++i) {
+        assert(graus[i] == graus_esperados[i]);
+        assert(ordem[i] == ordem_esperada[i]);
+    }
+    assert(coloracao_comparar_ordens(grafo, &comparacao) == 1);
+    assert(comparacao.cores_ordem_natural == 3U);
+    assert(comparacao.cores_welsh_powell == 2U);
+    grafo_destruir(grafo);
+
+    verificar_ordem(estrutura, COLORACAO_ORDEM_NATURAL, 6U, arestas, 4U, cores_natural, 3U);
+    verificar_ordem(estrutura, COLORACAO_WELSH_POWELL, 6U, arestas, 4U,
+        cores_welsh_powell, 2U);
+    verificar_ordem(estrutura, COLORACAO_WELSH_POWELL, 3U, triangulo, 3U,
+        cores_triangulo, 3U);
+    verificar_ordem(estrutura, COLORACAO_WELSH_POWELL, 4U, estrela, 3U, cores_estrela, 2U);
+    verificar_ordem(estrutura, COLORACAO_WELSH_POWELL, 0U, NULL, 0U, NULL, 0U);
+}
+
 static void teste_entradas_invalidas(void)
 {
     static const size_t aresta[][2] = {{0U, 1U}};
@@ -79,6 +137,11 @@ static void teste_entradas_invalidas(void)
 
     assert(coloracao_gulosa(NULL, &resultado) == 0);
     assert(coloracao_gulosa(grafo, NULL) == 0);
+    assert(coloracao_gulosa_ordem(grafo, (OrdemColoracao)99, &resultado) == 0);
+    assert(coloracao_calcular_graus(NULL, NULL) == 0);
+    assert(coloracao_ordem_welsh_powell(grafo, NULL) == 0);
+    assert(coloracao_comparar_ordens(grafo, NULL) == 0);
+    assert(coloracao_comparar_ordens(NULL, NULL) == 0);
     assert(coloracao_valida(grafo, &invalido) == 0);
     assert(coloracao_valida(NULL, &invalido) == 0);
     coloracao_liberar(NULL);
@@ -89,9 +152,11 @@ int main(void)
 {
     size_t i;
 
-    for (i = 0U; i < sizeof(ESTRUTURAS) / sizeof(ESTRUTURAS[0]); ++i)
+    for (i = 0U; i < sizeof(ESTRUTURAS) / sizeof(ESTRUTURAS[0]); ++i) {
         teste_casos(ESTRUTURAS[i]);
+        teste_welsh_powell(ESTRUTURAS[i]);
+    }
     teste_entradas_invalidas();
-    puts("Testes da coloracao gulosa passaram.");
+    puts("Testes da coloracao gulosa passaram (ordem natural e Welsh-Powell).");
     return 0;
 }
