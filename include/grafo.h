@@ -72,6 +72,7 @@ typedef enum {
 Grafo *grafo_criar(void);
 Grafo *grafo_criar_com_estrutura(EstruturaGrafo estrutura);
 void grafo_destruir(Grafo *grafo);
+EstruturaGrafo grafo_estrutura(const Grafo *grafo);
 
 int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice);
 int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
