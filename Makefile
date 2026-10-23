@@ -26,6 +26,8 @@ INTERFERENCIA_TEST_APP := $(BUILD_DIR)/test_interferencia.exe
 INTERFERENCIA_TEST_SRC := tests/test_interferencia.c src/interferencia.c src/grafo.c src/utf8io.c
 COLORACAO_TEST_APP := $(BUILD_DIR)/test_coloracao.exe
 COLORACAO_TEST_SRC := tests/test_coloracao.c src/coloracao.c src/grafo.c src/utf8io.c
+PROPRIEDADES_TEST_APP := $(BUILD_DIR)/test_coloracao_propriedades.exe
+PROPRIEDADES_TEST_SRC := tests/test_coloracao_propriedades.c src/coloracao.c src/grafo.c src/utf8io.c
 DPI ?= 150
 
 # Execucoes dos modos da Fase II. LIMITE e ESTRUTURA valem para os quatro
@@ -179,6 +181,9 @@ $(INTERFERENCIA_TEST_APP): $(INTERFERENCIA_TEST_SRC) include/grafo.h include/int
 $(COLORACAO_TEST_APP): $(COLORACAO_TEST_SRC) include/grafo.h include/coloracao.h include/utf8io.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(COLORACAO_TEST_SRC) -o $@ $(LDFLAGS)
 
+$(PROPRIEDADES_TEST_APP): $(PROPRIEDADES_TEST_SRC) include/grafo.h include/coloracao.h include/utf8io.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(PROPRIEDADES_TEST_SRC) -o $@ $(LDFLAGS)
+
 run: $(APP)
 	./$(APP)
 
@@ -319,7 +324,7 @@ fase1-nova: $(addprefix fase1-nova-n,$(TAMANHOS_GRANDES))
 $(ANALISE_TEST_APP): tests/test_analise_planaridade.c src/analise_planaridade.c include/analise_planaridade.h include/grafo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) tests/test_analise_planaridade.c src/analise_planaridade.c -o $@ $(LDFLAGS)
 
-test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP) $(DISTANCIA_TEST_APP) $(PONDERADAS_TEST_APP) $(CANDIDATO_TEST_APP) $(INTERFERENCIA_TEST_APP) $(COLORACAO_TEST_APP)
+test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP) $(DISTANCIA_TEST_APP) $(PONDERADAS_TEST_APP) $(CANDIDATO_TEST_APP) $(INTERFERENCIA_TEST_APP) $(COLORACAO_TEST_APP) $(PROPRIEDADES_TEST_APP)
 	./$(TEST_APP)
 	./$(OPERACOES_TEST_APP)
 	./$(CONEXOES_TEST_APP)
@@ -331,6 +336,7 @@ test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP)
 	./$(CANDIDATO_TEST_APP)
 	./$(INTERFERENCIA_TEST_APP)
 	./$(COLORACAO_TEST_APP)
+	./$(PROPRIEDADES_TEST_APP)
 
 clean:
 	@cmd /C "if exist \"$(BUILD_DIR)\" rmdir /S /Q \"$(BUILD_DIR)\""
