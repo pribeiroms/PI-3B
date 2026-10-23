@@ -215,6 +215,11 @@ void grafo_destruir(Grafo *grafo)
     free(grafo);
 }
 
+EstruturaGrafo grafo_estrutura(const Grafo *grafo)
+{
+    return grafo == NULL ? GRAFO_ESTRUTURA_CONJUNTA : grafo->estrutura;
+}
+
 int grafo_adicionar_vertice(Grafo *grafo, Vertice vertice)
 {
     size_t capacidade_adjacencia;
