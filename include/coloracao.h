@@ -53,6 +53,43 @@ int coloracao_ordem_welsh_powell(const Grafo *grafo, size_t *ordem);
 /* Executa as duas ordens e informa quantas cores cada uma usou. */
 int coloracao_comparar_ordens(const Grafo *grafo, ComparacaoColoracao *comparacao);
 
+/* Resultado da coloracao exata. Os limites interrompem a busca e sao
+ * informados pelo status; nesse caso o resultado nao e preenchido.
+ */
+typedef enum {
+    COLORACAO_EXATA_OK,
+    COLORACAO_EXATA_LIMITE_TAMANHO,  /* grafo maior que max_vertices */
+    COLORACAO_EXATA_LIMITE_TEMPO,    /* busca passou de max_segundos */
+    COLORACAO_EXATA_ERRO
+} StatusColoracaoExata;
+
+/* Valores 0 desativam o respectivo limite. */
+typedef struct {
+    size_t max_vertices;
+    double max_segundos;
+} LimitesColoracaoExata;
+
+/* Dados da execucao, preenchidos inclusive quando ha interrupcao.
+ * limite_inferior: menor k ainda nao descartado. Em COLORACAO_EXATA_OK e o
+ * numero cromatico; no limite de tempo, provou-se que k-1 cores nao bastam.
+ */
+typedef struct {
+    double segundos;
+    size_t limite_inferior;
+    unsigned long long nos_visitados;
+} InfoColoracaoExata;
+
+/* Coloracao exata por backtracking: testa k = 1, 2, ... ate encontrar uma
+ * coloracao valida, de modo que total_cores e o numero cromatico do grafo.
+ * Os ramos em que um vizinho ja usa a cor sao podados. limites e info podem
+ * ser NULL. Em COLORACAO_EXATA_OK o chamador libera com coloracao_liberar.
+ */
+StatusColoracaoExata coloracao_exata(const Grafo *grafo,
+    const LimitesColoracaoExata *limites, ResultadoColoracao *resultado,
+    InfoColoracaoExata *info);
+
+const char *coloracao_mensagem_exata(StatusColoracaoExata status);
+
 /* Retorna 1 se nenhum par de vertices adjacentes recebeu a mesma cor. */
 int coloracao_valida(const Grafo *grafo, const ResultadoColoracao *resultado);
 

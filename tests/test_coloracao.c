@@ -127,6 +127,132 @@ static void teste_welsh_powell(EstruturaGrafo estrutura)
     verificar_ordem(estrutura, COLORACAO_WELSH_POWELL, 0U, NULL, 0U, NULL, 0U);
 }
 
+static void verificar_exata(EstruturaGrafo estrutura, size_t vertices,
+    const size_t (*arestas)[2], size_t quantidade_arestas, size_t numero_cromatico)
+{
+    Grafo *grafo = montar(estrutura, vertices, arestas, quantidade_arestas);
+    ResultadoColoracao resultado, gulosa;
+    InfoColoracaoExata info;
+
+    assert(coloracao_exata(grafo, NULL, &resultado, &info) == COLORACAO_EXATA_OK);
+    assert(resultado.quantidade_vertices == vertices);
+    assert(resultado.total_cores == numero_cromatico);
+    assert(info.limite_inferior == numero_cromatico);
+    assert(coloracao_valida(grafo, &resultado) == 1);
+    /* A heuristica gulosa nunca usa menos cores que a solucao exata. */
+    assert(coloracao_gulosa(grafo, &gulosa) == 1);
+    assert(gulosa.total_cores >= resultado.total_cores);
+    coloracao_liberar(&gulosa);
+    coloracao_liberar(&resultado);
+    grafo_destruir(grafo);
+}
+
+/* Grafo de Mycielski: sem triangulos e com numero cromatico crescente. A
+ * partir de G (n vertices) cria copias u_i ligadas aos vizinhos de v_i e um
+ * vertice w ligado a todas as copias. Comeca em K2 (cromatico 2).
+ */
+static Grafo *montar_mycielski(EstruturaGrafo estrutura, size_t nivel)
+{
+    size_t arestas[300][2], quantidade_arestas = 1U, n = 2U, i, a, b, atual;
+    Grafo *grafo;
+
+    arestas[0][0] = 0U;
+    arestas[0][1] = 1U;
+    for (; nivel > 2U; --nivel) {
+        atual = quantidade_arestas;
+        for (i = 0U; i < atual; ++i) {
+            a = arestas[i][0];
+            b = arestas[i][1];
+            assert(quantidade_arestas + 2U <= 300U);
+            arestas[quantidade_arestas][0] = n + a;
+            arestas[quantidade_arestas++][1] = b;
+            arestas[quantidade_arestas][0] = n + b;
+            arestas[quantidade_arestas++][1] = a;
+        }
+        for (i = 0U; i < n; ++i) {
+            assert(quantidade_arestas < 300U);
+            arestas[quantidade_arestas][0] = n + i;
+            arestas[quantidade_arestas++][1] = 2U * n;
+        }
+        n = 2U * n + 1U;
+    }
+    grafo = montar(estrutura, n, (const size_t (*)[2])arestas, quantidade_arestas);
+    return grafo;
+}
+
+static void teste_coloracao_exata(EstruturaGrafo estrutura)
+{
+    static const size_t ciclo5[][2] = {{0U, 1U}, {1U, 2U}, {2U, 3U}, {3U, 4U}, {4U, 0U}};
+    static const size_t caminho[][2] = {{0U, 1U}, {1U, 2U}, {2U, 3U}};
+    static const size_t k4[][2] = {
+        {0U, 1U}, {0U, 2U}, {0U, 3U}, {1U, 2U}, {1U, 3U}, {2U, 3U}
+    };
+    /* Coroa: a gulosa em ordem natural usa 3 cores, o otimo e 2. */
+    static const size_t coroa[][2] = {
+        {0U, 3U}, {1U, 2U}, {0U, 5U}, {4U, 1U}, {2U, 5U}, {3U, 4U}
+    };
+    static const size_t petersen[][2] = {
+        {0U, 1U}, {1U, 2U}, {2U, 3U}, {3U, 4U}, {4U, 0U},
+        {0U, 5U}, {1U, 6U}, {2U, 7U}, {3U, 8U}, {4U, 9U},
+        {5U, 7U}, {7U, 9U}, {9U, 6U}, {6U, 8U}, {8U, 5U}
+    };
+    Grafo *grotzsch = montar_mycielski(estrutura, 4U);
+    ResultadoColoracao resultado;
+    InfoColoracaoExata info;
+
+    verificar_exata(estrutura, 0U, NULL, 0U, 0U);
+    verificar_exata(estrutura, 3U, NULL, 0U, 1U);
+    verificar_exata(estrutura, 4U, caminho, 3U, 2U);
+    verificar_exata(estrutura, 5U, ciclo5, 5U, 3U);
+    verificar_exata(estrutura, 4U, k4, 6U, 4U);
+    verificar_exata(estrutura, 6U, coroa, 6U, 2U);
+    verificar_exata(estrutura, 10U, petersen, 15U, 3U);
+
+    /* Grafo de Grotzsch (Mycielski de nivel 4): 11 vertices, cromatico 4. */
+    assert(grafo_quantidade_vertices(grotzsch) == 11U);
+    assert(coloracao_exata(grotzsch, NULL, &resultado, &info) == COLORACAO_EXATA_OK);
+    assert(resultado.total_cores == 4U);
+    assert(coloracao_valida(grotzsch, &resultado) == 1);
+    coloracao_liberar(&resultado);
+    grafo_destruir(grotzsch);
+}
+
+static void teste_limites_coloracao_exata(void)
+{
+    static const size_t triangulo[][2] = {{0U, 1U}, {1U, 2U}, {0U, 2U}};
+    LimitesColoracaoExata so_tamanho = {2U, 0.0};
+    LimitesColoracaoExata tamanho_suficiente = {3U, 0.0};
+    LimitesColoracaoExata pouco_tempo = {0U, 0.05};
+    Grafo *grafo = montar(GRAFO_LISTA_ADJACENCIA, 3U, triangulo, 3U);
+    ResultadoColoracao resultado;
+    InfoColoracaoExata info;
+
+    assert(coloracao_exata(grafo, &so_tamanho, &resultado, &info) ==
+        COLORACAO_EXATA_LIMITE_TAMANHO);
+    assert(resultado.cores == NULL);
+    assert(coloracao_exata(grafo, &tamanho_suficiente, &resultado, NULL) ==
+        COLORACAO_EXATA_OK);
+    assert(resultado.total_cores == 3U);
+    coloracao_liberar(&resultado);
+    grafo_destruir(grafo);
+
+    /* Mycielski de nivel 6 (47 vertices, cromatico 6): provar que 5 cores nao
+     * bastam leva muito mais que 50 ms, entao a busca e interrompida.
+     */
+    grafo = montar_mycielski(GRAFO_LISTA_ADJACENCIA, 6U);
+    assert(grafo_quantidade_vertices(grafo) == 47U);
+    assert(coloracao_exata(grafo, &pouco_tempo, &resultado, &info) ==
+        COLORACAO_EXATA_LIMITE_TEMPO);
+    assert(resultado.cores == NULL);
+    assert(info.limite_inferior >= 2U && info.limite_inferior <= 6U);
+    assert(info.nos_visitados > 0U);
+    assert(info.segundos >= 0.05);
+    grafo_destruir(grafo);
+
+    assert(coloracao_exata(NULL, NULL, &resultado, NULL) == COLORACAO_EXATA_ERRO);
+    assert(coloracao_mensagem_exata(COLORACAO_EXATA_LIMITE_TEMPO) != NULL);
+}
+
 static void teste_entradas_invalidas(void)
 {
     static const size_t aresta[][2] = {{0U, 1U}};
@@ -155,8 +281,10 @@ int main(void)
     for (i = 0U; i < sizeof(ESTRUTURAS) / sizeof(ESTRUTURAS[0]); ++i) {
         teste_casos(ESTRUTURAS[i]);
         teste_welsh_powell(ESTRUTURAS[i]);
+        teste_coloracao_exata(ESTRUTURAS[i]);
     }
+    teste_limites_coloracao_exata();
     teste_entradas_invalidas();
-    puts("Testes da coloracao gulosa passaram (ordem natural e Welsh-Powell).");
+    puts("Testes da coloracao passaram (gulosa, Welsh-Powell e exata).");
     return 0;
 }
