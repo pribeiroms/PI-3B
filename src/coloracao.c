@@ -186,9 +186,9 @@ static int cor_conflita(const BuscaExata *busca, size_t v, size_t cor)
     return 0;
 }
 
-/* Tenta colorir os vertices v..V-1 com no maximo k cores. maior_cor e a
+/* Tenta colorir os vertices v..V-1 com no maximo k cores. cores_usadas e a
  * quantidade de cores ja usadas em 0..v-1: oferecer ao vertice v apenas as
- * cores 0..maior_cor evita repetir colocacoes equivalentes (cores trocadas).
+ * cores 0..cores_usadas evita repetir coloracoes equivalentes (cores trocadas).
  */
 static int colorir_a_partir_de(BuscaExata *busca, size_t v, size_t cores_usadas)
 {
