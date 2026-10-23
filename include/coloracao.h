@@ -2,6 +2,7 @@
 #define COLORACAO_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 #include "grafo.h"
 
@@ -90,8 +91,51 @@ StatusColoracaoExata coloracao_exata(const Grafo *grafo,
 
 const char *coloracao_mensagem_exata(StatusColoracaoExata status);
 
+/* Resultado da verificacao de uma coloracao (gulosa ou exata). */
+typedef struct {
+    int valida;
+    size_t arestas_em_conflito;   /* arestas cujos extremos tem a mesma cor */
+    size_t primeira_aresta_conflito;  /* indice da primeira; so vale se houver */
+    int cores_consistentes;       /* toda cor < total_cores e todas usadas */
+} ValidacaoColoracao;
+
+/* Verifica que nenhuma aresta liga dois vertices da mesma cor e que as cores
+ * batem com total_cores. Retorna 1 se a verificacao pode ser feita (o resultado
+ * corresponde ao grafo) e 0 em erro; a conclusao fica em validacao->valida.
+ */
+int coloracao_validar(const Grafo *grafo, const ResultadoColoracao *resultado,
+    ValidacaoColoracao *validacao);
+
 /* Retorna 1 se nenhum par de vertices adjacentes recebeu a mesma cor. */
 int coloracao_valida(const Grafo *grafo, const ResultadoColoracao *resultado);
+
+/* Faixa de espectro a partir da qual os canais sao alocados, em sequencia. */
+typedef struct {
+    double frequencia_inicial_mhz;
+    double largura_canal_mhz;
+} PlanoFrequencias;
+
+/* Cor c vira o canal c + 1, ocupando
+ * [inicial + c * largura, inicial + (c + 1) * largura) MHz.
+ */
+typedef struct {
+    size_t numero;
+    double inicio_mhz;
+    double fim_mhz;
+    size_t torres;
+} CanalFrequencia;
+
+/* Monta um canal por cor e conta as torres de cada um. *canais recebe um vetor
+ * com total_cores posicoes, liberado pelo chamador com free. Retorna a
+ * quantidade de canais (0 em grafo vazio, com *canais == NULL) e preenche
+ * *erro com 1 se a entrada for invalida ou faltar memoria.
+ */
+size_t coloracao_mapear_canais(const ResultadoColoracao *resultado,
+    PlanoFrequencias plano, CanalFrequencia **canais, int *erro);
+
+/* Relatorio com a faixa e a quantidade de torres de cada canal. */
+void coloracao_exibir_canais(FILE *saida, const CanalFrequencia *canais,
+    size_t quantidade);
 
 void coloracao_liberar(ResultadoColoracao *resultado);
 

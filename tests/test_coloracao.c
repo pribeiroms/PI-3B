@@ -1,5 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "coloracao.h"
 
@@ -253,6 +255,120 @@ static void teste_limites_coloracao_exata(void)
     assert(coloracao_mensagem_exata(COLORACAO_EXATA_LIMITE_TEMPO) != NULL);
 }
 
+/* As colocacoes da gulosa (nas duas ordens) e da exata devem passar na
+ * validacao detalhada, nas tres estruturas.
+ */
+static void teste_validacao_resultados(EstruturaGrafo estrutura)
+{
+    static const size_t petersen[][2] = {
+        {0U, 1U}, {1U, 2U}, {2U, 3U}, {3U, 4U}, {4U, 0U},
+        {0U, 5U}, {1U, 6U}, {2U, 7U}, {3U, 8U}, {4U, 9U},
+        {5U, 7U}, {7U, 9U}, {9U, 6U}, {6U, 8U}, {8U, 5U}
+    };
+    Grafo *grafo = montar(estrutura, 10U, petersen, 15U);
+    ResultadoColoracao resultado;
+    ValidacaoColoracao validacao;
+
+    assert(coloracao_gulosa_ordem(grafo, COLORACAO_ORDEM_NATURAL, &resultado) == 1);
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 1);
+    assert(validacao.valida && validacao.cores_consistentes);
+    assert(validacao.arestas_em_conflito == 0U);
+    coloracao_liberar(&resultado);
+
+    assert(coloracao_gulosa_ordem(grafo, COLORACAO_WELSH_POWELL, &resultado) == 1);
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 1 && validacao.valida);
+    coloracao_liberar(&resultado);
+
+    assert(coloracao_exata(grafo, NULL, &resultado, NULL) == COLORACAO_EXATA_OK);
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 1 && validacao.valida);
+    coloracao_liberar(&resultado);
+    grafo_destruir(grafo);
+}
+
+static void teste_validacao_detecta_erros(void)
+{
+    static const size_t caminho[][2] = {{0U, 1U}, {1U, 2U}, {2U, 3U}};
+    Grafo *grafo = montar(GRAFO_LISTA_ADJACENCIA, 4U, caminho, 3U);
+    size_t correta[] = {0U, 1U, 0U, 1U};
+    size_t conflito[] = {0U, 1U, 1U, 1U};       /* arestas 1-2 e 2-3 */
+    size_t fora_do_total[] = {0U, 1U, 0U, 2U};  /* cor 2 com total 2 */
+    size_t cor_sobrando[] = {0U, 2U, 0U, 2U};   /* total 3, cor 1 sem uso */
+    ResultadoColoracao resultado = {correta, 4U, 2U};
+    ValidacaoColoracao validacao;
+
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 1 && validacao.valida);
+
+    resultado.cores = conflito;
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 1);
+    assert(!validacao.valida && validacao.cores_consistentes);
+    assert(validacao.arestas_em_conflito == 2U);
+    assert(validacao.primeira_aresta_conflito == 1U);
+    assert(coloracao_valida(grafo, &resultado) == 0);
+
+    resultado.cores = fora_do_total;
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 1);
+    assert(!validacao.valida && !validacao.cores_consistentes);
+    assert(validacao.arestas_em_conflito == 0U);
+
+    resultado.cores = cor_sobrando;
+    resultado.total_cores = 3U;
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 1);
+    assert(!validacao.valida && !validacao.cores_consistentes);
+
+    /* Resultado de outro grafo (tamanho diferente) nao pode ser validado. */
+    resultado.quantidade_vertices = 3U;
+    assert(coloracao_validar(grafo, &resultado, &validacao) == 0);
+    assert(coloracao_validar(NULL, &resultado, &validacao) == 0);
+    grafo_destruir(grafo);
+}
+
+static void teste_mapeamento_canais(void)
+{
+    static const size_t estrela[][2] = {{0U, 3U}, {1U, 3U}, {2U, 3U}};
+    PlanoFrequencias plano = {2400.0, 5.0};
+    PlanoFrequencias sem_largura = {2400.0, 0.0};
+    Grafo *grafo = montar(GRAFO_MATRIZ_ADJACENCIA, 4U, estrela, 3U);
+    ResultadoColoracao resultado, vazio = {NULL, 0U, 0U};
+    CanalFrequencia *canais;
+    char texto[1024];
+    size_t lidos;
+    int erro;
+    FILE *saida;
+
+    /* Gulosa natural: folhas 0, 1, 2 no canal 1 e o centro 3 no canal 2. */
+    assert(coloracao_gulosa(grafo, &resultado) == 1);
+    assert(coloracao_mapear_canais(&resultado, plano, &canais, &erro) == 2U);
+    assert(erro == 0 && canais != NULL);
+    assert(canais[0].numero == 1U && canais[0].torres == 3U);
+    assert(canais[0].inicio_mhz == 2400.0 && canais[0].fim_mhz == 2405.0);
+    assert(canais[1].numero == 2U && canais[1].torres == 1U);
+    assert(canais[1].inicio_mhz == 2405.0 && canais[1].fim_mhz == 2410.0);
+
+    saida = fopen("build/test_canais.tmp", "w+b");
+    assert(saida != NULL);
+    coloracao_exibir_canais(saida, canais, 2U);
+    rewind(saida);
+    lidos = fread(texto, 1U, sizeof(texto) - 1U, saida);
+    texto[lidos] = '\0';
+    fclose(saida);
+    assert(remove("build/test_canais.tmp") == 0);
+    assert(strstr(texto, "Canais necessarios: 2") != NULL);
+    assert(strstr(texto, "Canal 1: 2400.000 - 2405.000 MHz, 3 torre(s)") != NULL);
+    assert(strstr(texto, "Canal 2: 2405.000 - 2410.000 MHz, 1 torre(s)") != NULL);
+    assert(strstr(texto, "Total de torres: 4") != NULL);
+    free(canais);
+
+    assert(coloracao_mapear_canais(&resultado, sem_largura, &canais, &erro) == 0U);
+    assert(erro == 1 && canais == NULL);
+    assert(coloracao_mapear_canais(NULL, plano, &canais, &erro) == 0U && erro == 1);
+    assert(coloracao_mapear_canais(&vazio, plano, &canais, &erro) == 0U);
+    assert(erro == 0 && canais == NULL);
+    resultado.cores[3] = 5U;  /* cor fora de total_cores */
+    assert(coloracao_mapear_canais(&resultado, plano, &canais, &erro) == 0U && erro == 1);
+    coloracao_liberar(&resultado);
+    grafo_destruir(grafo);
+}
+
 static void teste_entradas_invalidas(void)
 {
     static const size_t aresta[][2] = {{0U, 1U}};
@@ -282,9 +398,12 @@ int main(void)
         teste_casos(ESTRUTURAS[i]);
         teste_welsh_powell(ESTRUTURAS[i]);
         teste_coloracao_exata(ESTRUTURAS[i]);
+        teste_validacao_resultados(ESTRUTURAS[i]);
     }
     teste_limites_coloracao_exata();
+    teste_validacao_detecta_erros();
+    teste_mapeamento_canais();
     teste_entradas_invalidas();
-    puts("Testes da coloracao passaram (gulosa, Welsh-Powell e exata).");
+    puts("Testes da coloracao passaram (gulosa, Welsh-Powell, exata, validacao e canais).");
     return 0;
 }

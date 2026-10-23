@@ -283,17 +283,109 @@ const char *coloracao_mensagem_exata(StatusColoracaoExata status)
     }
 }
 
-int coloracao_valida(const Grafo *grafo, const ResultadoColoracao *resultado)
+int coloracao_validar(const Grafo *grafo, const ResultadoColoracao *resultado,
+    ValidacaoColoracao *validacao)
 {
-    size_t indice, origem, destino;
+    size_t indice, origem, destino, *usos;
+    size_t quantidade = grafo_quantidade_vertices(grafo);
 
-    if (grafo == NULL || resultado == NULL ||
-        resultado->quantidade_vertices != grafo_quantidade_vertices(grafo)) return 0;
+    if (grafo == NULL || resultado == NULL || validacao == NULL ||
+        resultado->quantidade_vertices != quantidade ||
+        (quantidade > 0U && resultado->cores == NULL)) return 0;
+    validacao->arestas_em_conflito = 0U;
+    validacao->primeira_aresta_conflito = 0U;
+    validacao->cores_consistentes = 1;
     for (indice = 0U; indice < grafo_quantidade_arestas(grafo); ++indice) {
         if (!grafo_obter_aresta(grafo, indice, &origem, &destino)) return 0;
-        if (resultado->cores[origem] == resultado->cores[destino]) return 0;
+        if (resultado->cores[origem] != resultado->cores[destino]) continue;
+        if (validacao->arestas_em_conflito == 0U)
+            validacao->primeira_aresta_conflito = indice;
+        ++validacao->arestas_em_conflito;
     }
+
+    /* total_cores precisa ser exatamente o numero de cores distintas usadas. */
+    if (resultado->total_cores > quantidade) {
+        validacao->cores_consistentes = 0;
+    } else if (quantidade > 0U) {
+        usos = calloc(resultado->total_cores + 1U, sizeof(size_t));
+        if (usos == NULL) return 0;
+        for (indice = 0U; indice < quantidade; ++indice) {
+            if (resultado->cores[indice] >= resultado->total_cores) {
+                validacao->cores_consistentes = 0;
+                break;
+            }
+            ++usos[resultado->cores[indice]];
+        }
+        for (indice = 0U; validacao->cores_consistentes &&
+             indice < resultado->total_cores; ++indice)
+            if (usos[indice] == 0U) validacao->cores_consistentes = 0;
+        free(usos);
+    } else if (resultado->total_cores != 0U) {
+        validacao->cores_consistentes = 0;
+    }
+    validacao->valida = validacao->arestas_em_conflito == 0U &&
+        validacao->cores_consistentes;
     return 1;
+}
+
+int coloracao_valida(const Grafo *grafo, const ResultadoColoracao *resultado)
+{
+    ValidacaoColoracao validacao;
+    return coloracao_validar(grafo, resultado, &validacao) && validacao.valida;
+}
+
+size_t coloracao_mapear_canais(const ResultadoColoracao *resultado,
+    PlanoFrequencias plano, CanalFrequencia **canais, int *erro)
+{
+    size_t cor, v;
+    CanalFrequencia *vetor;
+
+    if (erro != NULL) *erro = 1;
+    if (canais != NULL) *canais = NULL;
+    if (resultado == NULL || canais == NULL || erro == NULL ||
+        !(plano.largura_canal_mhz > 0.0) || !(plano.frequencia_inicial_mhz >= 0.0) ||
+        resultado->total_cores > resultado->quantidade_vertices ||
+        (resultado->quantidade_vertices > 0U && resultado->cores == NULL)) return 0U;
+    *erro = 0;
+    if (resultado->total_cores == 0U) return 0U;
+
+    vetor = malloc(resultado->total_cores * sizeof(CanalFrequencia));
+    if (vetor == NULL) {
+        *erro = 1;
+        return 0U;
+    }
+    for (cor = 0U; cor < resultado->total_cores; ++cor) {
+        vetor[cor].numero = cor + 1U;
+        vetor[cor].inicio_mhz = plano.frequencia_inicial_mhz +
+            (double)cor * plano.largura_canal_mhz;
+        vetor[cor].fim_mhz = vetor[cor].inicio_mhz + plano.largura_canal_mhz;
+        vetor[cor].torres = 0U;
+    }
+    for (v = 0U; v < resultado->quantidade_vertices; ++v) {
+        if (resultado->cores[v] >= resultado->total_cores) {
+            free(vetor);
+            *erro = 1;
+            return 0U;
+        }
+        ++vetor[resultado->cores[v]].torres;
+    }
+    *canais = vetor;
+    return resultado->total_cores;
+}
+
+void coloracao_exibir_canais(FILE *saida, const CanalFrequencia *canais,
+    size_t quantidade)
+{
+    size_t i, torres = 0U;
+
+    fprintf(saida, "\nDistribuicao de canais de radio\nCanais necessarios: %zu\n",
+        quantidade);
+    for (i = 0U; i < quantidade; ++i) {
+        fprintf(saida, "Canal %zu: %.3f - %.3f MHz, %zu torre(s)\n",
+            canais[i].numero, canais[i].inicio_mhz, canais[i].fim_mhz, canais[i].torres);
+        torres += canais[i].torres;
+    }
+    fprintf(saida, "Total de torres: %zu\n", torres);
 }
 
 void coloracao_liberar(ResultadoColoracao *resultado)
