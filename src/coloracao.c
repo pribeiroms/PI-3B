@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "coloracao.h"
 
@@ -146,6 +147,140 @@ int coloracao_comparar_ordens(const Grafo *grafo, ComparacaoColoracao *comparaca
     coloracao_liberar(&natural);
     coloracao_liberar(&welsh_powell);
     return 1;
+}
+
+/* Intervalo, em nos visitados, entre as consultas ao relogio. */
+#define INTERVALO_CONSULTA_TEMPO 4096U
+
+typedef struct {
+    const Grafo *grafo;
+    size_t quantidade;
+    size_t k;
+    size_t *cores;
+    clock_t inicio;
+    double max_segundos;
+    unsigned long long nos_visitados;
+    int tempo_esgotado;
+} BuscaExata;
+
+static double segundos_desde(clock_t inicio)
+{
+    return (double)(clock() - inicio) / CLOCKS_PER_SEC;
+}
+
+/* Poda: retorna 1 se algum vizinho ja colorido de v usa a cor. Os vertices
+ * sao coloridos na ordem natural, entao os ja coloridos sao os de indice < v.
+ */
+static int cor_conflita(const BuscaExata *busca, size_t v, size_t cor)
+{
+    const NoAdjacencia *vizinho;
+    size_t u;
+
+    if (grafo_estrutura(busca->grafo) == GRAFO_MATRIZ_ADJACENCIA) {
+        for (u = 0U; u < v; ++u)
+            if (busca->cores[u] == cor && grafo_sao_adjacentes(busca->grafo, v, u)) return 1;
+        return 0;
+    }
+    for (vizinho = grafo_vizinhos(busca->grafo, v); vizinho != NULL; vizinho = vizinho->proximo)
+        if (vizinho->vertice < v && busca->cores[vizinho->vertice] == cor) return 1;
+    return 0;
+}
+
+/* Tenta colorir os vertices v..V-1 com no maximo k cores. maior_cor e a
+ * quantidade de cores ja usadas em 0..v-1: oferecer ao vertice v apenas as
+ * cores 0..maior_cor evita repetir colocacoes equivalentes (cores trocadas).
+ */
+static int colorir_a_partir_de(BuscaExata *busca, size_t v, size_t cores_usadas)
+{
+    size_t cor, limite;
+
+    if (v == busca->quantidade) return 1;
+    ++busca->nos_visitados;
+    if (busca->max_segundos > 0.0 &&
+        busca->nos_visitados % INTERVALO_CONSULTA_TEMPO == 0U &&
+        segundos_desde(busca->inicio) > busca->max_segundos) {
+        busca->tempo_esgotado = 1;
+        return 0;
+    }
+    limite = cores_usadas < busca->k ? cores_usadas + 1U : busca->k;
+    for (cor = 0U; cor < limite; ++cor) {
+        if (cor_conflita(busca, v, cor)) continue;
+        busca->cores[v] = cor;
+        if (colorir_a_partir_de(busca, v + 1U,
+                cor == cores_usadas ? cores_usadas + 1U : cores_usadas)) return 1;
+        if (busca->tempo_esgotado) return 0;
+    }
+    busca->cores[v] = SEM_COR;
+    return 0;
+}
+
+StatusColoracaoExata coloracao_exata(const Grafo *grafo,
+    const LimitesColoracaoExata *limites, ResultadoColoracao *resultado,
+    InfoColoracaoExata *info)
+{
+    BuscaExata busca;
+    size_t v;
+    StatusColoracaoExata status = COLORACAO_EXATA_OK;
+
+    if (info != NULL) {
+        info->segundos = 0.0;
+        info->limite_inferior = 0U;
+        info->nos_visitados = 0U;
+    }
+    if (grafo == NULL || resultado == NULL) return COLORACAO_EXATA_ERRO;
+    resultado->cores = NULL;
+    resultado->quantidade_vertices = 0U;
+    resultado->total_cores = 0U;
+
+    busca.grafo = grafo;
+    busca.quantidade = grafo_quantidade_vertices(grafo);
+    busca.max_segundos = limites != NULL ? limites->max_segundos : 0.0;
+    busca.nos_visitados = 0U;
+    busca.tempo_esgotado = 0;
+    busca.inicio = clock();
+    if (limites != NULL && limites->max_vertices > 0U &&
+        busca.quantidade > limites->max_vertices) return COLORACAO_EXATA_LIMITE_TAMANHO;
+    if (busca.quantidade == 0U) return COLORACAO_EXATA_OK;
+    if (busca.quantidade > SIZE_MAX / sizeof(size_t)) return COLORACAO_EXATA_ERRO;
+
+    busca.cores = malloc(busca.quantidade * sizeof(size_t));
+    if (busca.cores == NULL) return COLORACAO_EXATA_ERRO;
+    for (v = 0U; v < busca.quantidade; ++v) busca.cores[v] = SEM_COR;
+
+    /* Com k = V sempre ha solucao, entao o laco termina. */
+    for (busca.k = 1U; !colorir_a_partir_de(&busca, 0U, 0U); ++busca.k) {
+        if (busca.tempo_esgotado) {
+            status = COLORACAO_EXATA_LIMITE_TEMPO;
+            break;
+        }
+    }
+    if (info != NULL) {
+        info->segundos = segundos_desde(busca.inicio);
+        info->limite_inferior = busca.k;
+        info->nos_visitados = busca.nos_visitados;
+    }
+    if (status != COLORACAO_EXATA_OK) {
+        free(busca.cores);
+        return status;
+    }
+    resultado->cores = busca.cores;
+    resultado->quantidade_vertices = busca.quantidade;
+    resultado->total_cores = busca.k;
+    return COLORACAO_EXATA_OK;
+}
+
+const char *coloracao_mensagem_exata(StatusColoracaoExata status)
+{
+    switch (status) {
+        case COLORACAO_EXATA_OK:
+            return "Coloracao exata concluida; numero cromatico determinado.";
+        case COLORACAO_EXATA_LIMITE_TAMANHO:
+            return "Coloracao exata nao executada: grafo maior que o limite de vertices.";
+        case COLORACAO_EXATA_LIMITE_TEMPO:
+            return "Coloracao exata interrompida pelo limite de tempo.";
+        default:
+            return "Erro na coloracao exata.";
+    }
 }
 
 int coloracao_valida(const Grafo *grafo, const ResultadoColoracao *resultado)
