@@ -7,6 +7,10 @@
 #include "medicao.h"
 
 #define AMOSTRAS 10000U
+#define ARQUIVO_SAIDA "build/test_medicao_saida.csv"
+#define CABECALHO \
+    "data_utc,algoritmo,estrutura,limite_n,vertices,arestas,tempo_ms," \
+    "memoria_grafo_bytes,memoria_auxiliar_bytes,custo_agm_km,numero_cores,status\n"
 
 static void teste_leitura_nao_negativa_e_finita(void)
 {
@@ -149,6 +153,152 @@ static void teste_recusa_conjunta_e_entradas_invalidas(void)
     grafo_destruir(lista);
 }
 
+/* Confere o que vem depois do carimbo de data ("...Z" entre aspas, 20 chars). */
+static int sufixo_apos_data(const char *linha, const char *esperado)
+{
+    const char *fim = strchr(linha + 1, '"');
+
+    return linha[0] == '"' && fim != NULL && fim - (linha + 1) == 20 &&
+        strcmp(fim + 1, esperado) == 0;
+}
+
+static void registro_exemplo(RegistroMedicao *registro)
+{
+    memset(registro, 0, sizeof(*registro));
+    registro->algoritmo = "kruskal";
+    registro->estrutura = GRAFO_LISTA_ADJACENCIA;
+    registro->limite_n = 1000U;
+    registro->vertices = 1000U;
+    registro->arestas = 2468U;
+    registro->tempo_ms = 0.25;
+    registro->memoria_grafo_bytes = 51248U;
+    registro->memoria_auxiliar_bytes = 24000U;
+    registro->tem_custo_agm = 1;
+    registro->custo_agm_km = 1234.5;
+    registro->status = MEDICAO_STATUS_OK;
+}
+
+static void teste_nomes_de_status(void)
+{
+    assert(strcmp(medicao_nome_status(MEDICAO_STATUS_OK), "ok") == 0);
+    assert(strcmp(medicao_nome_status(MEDICAO_STATUS_LIMITE_TEMPO), "limite_tempo") == 0);
+    assert(strcmp(medicao_nome_status(MEDICAO_STATUS_LIMITE_TAMANHO), "limite_tamanho") == 0);
+    assert(strcmp(medicao_nome_status(MEDICAO_STATUS_ERRO), "erro") == 0);
+    assert(medicao_nome_status((StatusMedicao)99) == NULL);
+}
+
+static void teste_grava_cabecalho_e_linhas(void)
+{
+    RegistroMedicao primeiro, segundo, terceiro;
+    FILE *arquivo;
+    char linha[512];
+
+    remove(ARQUIVO_SAIDA);
+    registro_exemplo(&primeiro);
+
+    registro_exemplo(&segundo);
+    segundo.algoritmo = "coloracao_exata";
+    segundo.estrutura = GRAFO_MATRIZ_ADJACENCIA;
+    segundo.limite_n = 500U;
+    segundo.vertices = 500U;
+    segundo.arestas = 1200U;
+    segundo.tempo_ms = 15.5;
+    segundo.memoria_grafo_bytes = 2000000U;
+    segundo.memoria_auxiliar_bytes = 4000U;
+    segundo.tem_custo_agm = 0;
+    segundo.tem_numero_cores = 1;
+    segundo.numero_cores = 4U;
+    segundo.status = MEDICAO_STATUS_LIMITE_TEMPO;
+
+    registro_exemplo(&terceiro);
+    terceiro.algoritmo = "coloracao_gulosa";
+    terceiro.limite_n = 100U;
+    terceiro.vertices = 100U;
+    terceiro.arestas = 33U;
+    terceiro.tempo_ms = -1.0; /* cronometro indisponivel */
+    terceiro.memoria_auxiliar_bytes = 0U;
+    terceiro.tem_custo_agm = 0;
+    terceiro.tem_numero_cores = 1;
+    terceiro.numero_cores = 3U;
+
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &primeiro) == 1);
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &segundo) == 1);
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &terceiro) == 1);
+
+    arquivo = fopen(ARQUIVO_SAIDA, "r");
+    assert(arquivo != NULL);
+    assert(fgets(linha, sizeof(linha), arquivo) != NULL);
+    assert(strcmp(linha, CABECALHO) == 0);
+    assert(fgets(linha, sizeof(linha), arquivo) != NULL);
+    assert(sufixo_apos_data(linha,
+        ",\"kruskal\",lista,1000,1000,2468,0.250000,51248,24000,1234.5000,,ok\n"));
+    assert(fgets(linha, sizeof(linha), arquivo) != NULL);
+    assert(sufixo_apos_data(linha,
+        ",\"coloracao_exata\",matriz,500,500,1200,15.500000,2000000,4000,,4,limite_tempo\n"));
+    assert(fgets(linha, sizeof(linha), arquivo) != NULL);
+    assert(sufixo_apos_data(linha,
+        ",\"coloracao_gulosa\",lista,100,100,33,,51248,0,,3,ok\n"));
+    assert(fgets(linha, sizeof(linha), arquivo) == NULL); /* cabecalho uma vez so */
+    fclose(arquivo);
+    remove(ARQUIVO_SAIDA);
+}
+
+static void teste_recusa_arquivo_com_outro_cabecalho(void)
+{
+    RegistroMedicao registro;
+    FILE *arquivo;
+    char linha[512];
+
+    remove(ARQUIVO_SAIDA);
+    arquivo = fopen(ARQUIVO_SAIDA, "w");
+    assert(arquivo != NULL);
+    fputs("coluna_a,coluna_b\n1,2\n", arquivo);
+    fclose(arquivo);
+
+    registro_exemplo(&registro);
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &registro) == 0);
+
+    arquivo = fopen(ARQUIVO_SAIDA, "r");
+    assert(arquivo != NULL);
+    assert(fgets(linha, sizeof(linha), arquivo) != NULL);
+    assert(strcmp(linha, "coluna_a,coluna_b\n") == 0);
+    assert(fgets(linha, sizeof(linha), arquivo) != NULL);
+    assert(strcmp(linha, "1,2\n") == 0);
+    assert(fgets(linha, sizeof(linha), arquivo) == NULL);
+    fclose(arquivo);
+    remove(ARQUIVO_SAIDA);
+}
+
+static void teste_recusa_registros_invalidos(void)
+{
+    RegistroMedicao registro;
+    FILE *arquivo;
+
+    remove(ARQUIVO_SAIDA);
+    registro_exemplo(&registro);
+    assert(medicao_gravar_csv(NULL, &registro) == 0);
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, NULL) == 0);
+
+    registro_exemplo(&registro);
+    registro.algoritmo = NULL;
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &registro) == 0);
+
+    registro_exemplo(&registro);
+    registro.estrutura = GRAFO_ESTRUTURA_CONJUNTA;
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &registro) == 0);
+
+    registro_exemplo(&registro);
+    registro.status = (StatusMedicao)99;
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &registro) == 0);
+
+    registro_exemplo(&registro);
+    registro.custo_agm_km = -1.0;
+    assert(medicao_gravar_csv(ARQUIVO_SAIDA, &registro) == 0);
+
+    arquivo = fopen(ARQUIVO_SAIDA, "r");
+    assert(arquivo == NULL); /* as recusas nao criaram o arquivo */
+}
+
 int main(void)
 {
     teste_leitura_nao_negativa_e_finita();
@@ -159,6 +309,10 @@ int main(void)
     teste_registro_da_lista();
     teste_registro_da_matriz();
     teste_recusa_conjunta_e_entradas_invalidas();
+    teste_nomes_de_status();
+    teste_grava_cabecalho_e_linhas();
+    teste_recusa_arquivo_com_outro_cabecalho();
+    teste_recusa_registros_invalidos();
     puts("Testes do cronometro passaram.");
     return 0;
 }

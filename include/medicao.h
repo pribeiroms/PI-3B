@@ -3,9 +3,9 @@
 
 /* Medicao de desempenho dos algoritmos da Fase II (issue #86, RF03).
  *
- * Duas pecas: o cronometro de tempo decorrido e o registro de uma execucao
- * (algoritmo, estrutura, tamanho, tempo, memoria e resultado). A gravacao do
- * registro em CSV entra na etapa seguinte da mesma issue.
+ * Tres pecas: o cronometro de tempo decorrido, o registro de uma execucao
+ * (algoritmo, estrutura, tamanho, tempo, memoria e resultado) e a gravacao
+ * desse registro em CSV.
  */
 
 #include <stddef.h>
@@ -81,5 +81,27 @@ typedef struct {
  */
 int medicao_preencher_do_grafo(RegistroMedicao *registro, const char *algoritmo,
     const Grafo *grafo, size_t limite_n);
+
+/* Nome do status no CSV: "ok", "limite_tempo", "limite_tamanho" ou "erro".
+ * Retorna NULL para um valor fora do enum. */
+const char *medicao_nome_status(StatusMedicao status);
+
+/* Acrescenta o registro como uma linha do CSV da Fase II em caminho, criando o
+ * arquivo (com cabecalho) se ele nao existir ou estiver vazio. Colunas:
+ *
+ *   data_utc,algoritmo,estrutura,limite_n,vertices,arestas,tempo_ms,
+ *   memoria_grafo_bytes,memoria_auxiliar_bytes,custo_agm_km,numero_cores,status
+ *
+ * tempo_ms sai com 6 casas e custo_agm_km com 4. As colunas custo_agm_km e
+ * numero_cores ficam vazias quando tem_custo_agm ou tem_numero_cores e 0, e
+ * tempo_ms fica vazio se o tempo for negativo ou nao finito (cronometro
+ * indisponivel), para nao gravar o -1.0 como se fosse uma medida.
+ *
+ * Recusa, retornando 0 sem tocar no arquivo: caminho ou registro NULL,
+ * algoritmo NULL, estrutura diferente de lista e matriz, status fora do enum e
+ * custo negativo ou nao finito. Recusa tambem um arquivo existente cujo
+ * cabecalho seja outro. Retorna 0 ainda em falha ao abrir, gravar ou fechar.
+ */
+int medicao_gravar_csv(const char *caminho, const RegistroMedicao *registro);
 
 #endif

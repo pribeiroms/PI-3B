@@ -4,14 +4,17 @@
 #define _POSIX_C_SOURCE 199309L
 #endif
 
+#include <math.h>
 #include <stddef.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
 
 #include "medicao.h"
+#include "utf8io.h"
 
 #ifdef _WIN32
 #include <windows.h>
-#else
-#include <time.h>
 #endif
 
 #ifdef _WIN32
@@ -101,4 +104,90 @@ int medicao_preencher_do_grafo(RegistroMedicao *registro, const char *algoritmo,
     novo.status = MEDICAO_STATUS_OK;
     *registro = novo;
     return 1;
+}
+
+#define CABECALHO_CSV \
+    "data_utc,algoritmo,estrutura,limite_n,vertices,arestas,tempo_ms," \
+    "memoria_grafo_bytes,memoria_auxiliar_bytes,custo_agm_km,numero_cores,status\n"
+
+const char *medicao_nome_status(StatusMedicao status)
+{
+    switch (status) {
+        case MEDICAO_STATUS_OK: return "ok";
+        case MEDICAO_STATUS_LIMITE_TEMPO: return "limite_tempo";
+        case MEDICAO_STATUS_LIMITE_TAMANHO: return "limite_tamanho";
+        case MEDICAO_STATUS_ERRO: return "erro";
+    }
+    return NULL;
+}
+
+static const char *nome_estrutura(EstruturaGrafo estrutura)
+{
+    return estrutura == GRAFO_LISTA_ADJACENCIA ? "lista" : "matriz";
+}
+
+static int registro_valido(const RegistroMedicao *registro)
+{
+    if (registro == NULL || registro->algoritmo == NULL) return 0;
+    if (registro->estrutura != GRAFO_LISTA_ADJACENCIA &&
+        registro->estrutura != GRAFO_MATRIZ_ADJACENCIA) return 0;
+    if (medicao_nome_status(registro->status) == NULL) return 0;
+    if (registro->tem_custo_agm &&
+        (!isfinite(registro->custo_agm_km) || registro->custo_agm_km < 0.0))
+        return 0;
+    return 1;
+}
+
+/* Texto entre aspas, com aspas internas dobradas, como no CSV da Fase I. */
+static void escrever_campo(FILE *arquivo, const char *texto)
+{
+    fputc('"', arquivo);
+    for (; *texto != '\0'; ++texto) {
+        if (*texto == '"') fputc('"', arquivo);
+        fputc(*texto, arquivo);
+    }
+    fputc('"', arquivo);
+}
+
+int medicao_gravar_csv(const char *caminho, const RegistroMedicao *registro)
+{
+    char linha[512];
+    char data[32] = "indisponivel";
+    time_t agora = time(NULL);
+    struct tm *utc;
+    FILE *arquivo;
+    int vazio, ok;
+
+    if (caminho == NULL || !registro_valido(registro)) return 0;
+    arquivo = utf8_fopen(caminho, "a+");
+    if (arquivo == NULL) return 0;
+    rewind(arquivo);
+    vazio = fgets(linha, sizeof(linha), arquivo) == NULL;
+    if (ferror(arquivo) || (!vazio && strcmp(linha, CABECALHO_CSV) != 0)) {
+        fclose(arquivo);
+        return 0;
+    }
+    if (fseek(arquivo, 0, SEEK_END) != 0) {
+        fclose(arquivo);
+        return 0;
+    }
+    utc = gmtime(&agora);
+    if (utc != NULL) (void)strftime(data, sizeof(data), "%Y-%m-%dT%H:%M:%SZ", utc);
+    if (vazio) fputs(CABECALHO_CSV, arquivo);
+    escrever_campo(arquivo, data);
+    fputc(',', arquivo);
+    escrever_campo(arquivo, registro->algoritmo);
+    fprintf(arquivo, ",%s,%zu,%zu,%zu,", nome_estrutura(registro->estrutura),
+        registro->limite_n, registro->vertices, registro->arestas);
+    if (isfinite(registro->tempo_ms) && registro->tempo_ms >= 0.0)
+        fprintf(arquivo, "%.6f", registro->tempo_ms);
+    fprintf(arquivo, ",%zu,%zu,", registro->memoria_grafo_bytes,
+        registro->memoria_auxiliar_bytes);
+    if (registro->tem_custo_agm) fprintf(arquivo, "%.4f", registro->custo_agm_km);
+    fputc(',', arquivo);
+    if (registro->tem_numero_cores) fprintf(arquivo, "%zu", registro->numero_cores);
+    fprintf(arquivo, ",%s\n", medicao_nome_status(registro->status));
+    ok = !ferror(arquivo);
+    if (fclose(arquivo) != 0) ok = 0;
+    return ok;
 }
