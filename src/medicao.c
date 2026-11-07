@@ -78,3 +78,27 @@ double cronometro_decorrido_ms(const Cronometro *cronometro)
         agora < cronometro->marca) return -1.0;
     return ticks_para_ms(agora - cronometro->marca);
 }
+
+int medicao_preencher_do_grafo(RegistroMedicao *registro, const char *algoritmo,
+    const Grafo *grafo, size_t limite_n)
+{
+    RegistroMedicao novo = {0};
+    EstimativaMemoriaGrafo memoria;
+    EstruturaGrafo estrutura;
+
+    if (registro == NULL || algoritmo == NULL || grafo == NULL) return 0;
+    estrutura = grafo_estrutura(grafo);
+    if (estrutura != GRAFO_LISTA_ADJACENCIA &&
+        estrutura != GRAFO_MATRIZ_ADJACENCIA) return 0;
+    if (!grafo_estimar_memoria(grafo, &memoria)) return 0;
+    novo.algoritmo = algoritmo;
+    novo.estrutura = estrutura;
+    novo.limite_n = limite_n;
+    novo.vertices = grafo_quantidade_vertices(grafo);
+    novo.arestas = grafo_quantidade_arestas(grafo);
+    novo.memoria_grafo_bytes = estrutura == GRAFO_LISTA_ADJACENCIA ?
+        memoria.memoria_lista_total_bytes : memoria.memoria_matriz_total_bytes;
+    novo.status = MEDICAO_STATUS_OK;
+    *registro = novo;
+    return 1;
+}
