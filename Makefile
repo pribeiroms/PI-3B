@@ -7,7 +7,7 @@ APP := $(BUILD_DIR)/grafo.exe
 TEST_APP := $(BUILD_DIR)/test_grafo.exe
 OPERACOES_TEST_APP := $(BUILD_DIR)/test_operacoes_grafo.exe
 CONEXOES_TEST_APP := $(BUILD_DIR)/test_conexoes_geograficas.exe
-SRC := src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c src/execucao.c src/exportar_dot.c src/candidato_fibra.c src/interferencia.c src/utf8io.c
+SRC := src/main.c src/grafo.c src/dataset.c src/analise_planaridade.c src/execucao.c src/exportar_dot.c src/candidato_fibra.c src/interferencia.c src/agm.c src/utf8io.c
 ANALISE_TEST_APP := $(BUILD_DIR)/test_analise_planaridade.exe
 DOT_TEST_APP := $(BUILD_DIR)/test_exportar_dot.exe
 TEST_SRC := tests/test_grafo.c src/grafo.c src/utf8io.c
@@ -28,6 +28,8 @@ COLORACAO_TEST_APP := $(BUILD_DIR)/test_coloracao.exe
 COLORACAO_TEST_SRC := tests/test_coloracao.c src/coloracao.c src/grafo.c src/utf8io.c
 PROPRIEDADES_TEST_APP := $(BUILD_DIR)/test_coloracao_propriedades.exe
 PROPRIEDADES_TEST_SRC := tests/test_coloracao_propriedades.c src/coloracao.c src/grafo.c src/utf8io.c
+AGM_TEST_APP := $(BUILD_DIR)/test_agm.exe
+AGM_TEST_SRC := tests/test_agm.c src/agm.c src/grafo.c src/utf8io.c
 DPI ?= 150
 
 # Execucoes dos modos da Fase II. LIMITE e ESTRUTURA valem para os quatro
@@ -148,7 +150,7 @@ ajuda:
 $(BUILD_DIR):
 	@if not exist "$(BUILD_DIR)" mkdir "$(BUILD_DIR)"
 
-$(APP): $(SRC) include/grafo.h include/dataset.h include/analise_planaridade.h include/execucao.h include/exportar_dot.h include/candidato_fibra.h include/interferencia.h include/utf8io.h | $(BUILD_DIR)
+$(APP): $(SRC) include/grafo.h include/dataset.h include/analise_planaridade.h include/execucao.h include/exportar_dot.h include/candidato_fibra.h include/interferencia.h include/agm.h include/utf8io.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
 
 $(TEST_APP): $(TEST_SRC) include/grafo.h include/utf8io.h | $(BUILD_DIR)
@@ -183,6 +185,9 @@ $(COLORACAO_TEST_APP): $(COLORACAO_TEST_SRC) include/grafo.h include/coloracao.h
 
 $(PROPRIEDADES_TEST_APP): $(PROPRIEDADES_TEST_SRC) include/grafo.h include/coloracao.h include/utf8io.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(PROPRIEDADES_TEST_SRC) -o $@ $(LDFLAGS)
+
+$(AGM_TEST_APP): $(AGM_TEST_SRC) include/grafo.h include/agm.h include/utf8io.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(AGM_TEST_SRC) -o $@ $(LDFLAGS)
 
 run: $(APP)
 	./$(APP)
@@ -324,7 +329,7 @@ fase1-nova: $(addprefix fase1-nova-n,$(TAMANHOS_GRANDES))
 $(ANALISE_TEST_APP): tests/test_analise_planaridade.c src/analise_planaridade.c include/analise_planaridade.h include/grafo.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) tests/test_analise_planaridade.c src/analise_planaridade.c -o $@ $(LDFLAGS)
 
-test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP) $(DISTANCIA_TEST_APP) $(PONDERADAS_TEST_APP) $(CANDIDATO_TEST_APP) $(INTERFERENCIA_TEST_APP) $(COLORACAO_TEST_APP) $(PROPRIEDADES_TEST_APP)
+test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(ANALISE_TEST_APP) $(DOT_TEST_APP) $(DISTANCIA_TEST_APP) $(PONDERADAS_TEST_APP) $(CANDIDATO_TEST_APP) $(INTERFERENCIA_TEST_APP) $(COLORACAO_TEST_APP) $(PROPRIEDADES_TEST_APP) $(AGM_TEST_APP)
 	./$(TEST_APP)
 	./$(OPERACOES_TEST_APP)
 	./$(CONEXOES_TEST_APP)
@@ -337,6 +342,7 @@ test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP)
 	./$(INTERFERENCIA_TEST_APP)
 	./$(COLORACAO_TEST_APP)
 	./$(PROPRIEDADES_TEST_APP)
+	./$(AGM_TEST_APP)
 
 clean:
 	@cmd /C "if exist \"$(BUILD_DIR)\" rmdir /S /Q \"$(BUILD_DIR)\""
