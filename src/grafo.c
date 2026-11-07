@@ -9,12 +9,14 @@ struct Grafo {
     Vertice *vertices;
     size_t quantidade_vertices;
     size_t capacidade_vertices;
-    Aresta *arestas;
+    ArestaPonderada *arestas;
     size_t quantidade_arestas;
     size_t capacidade_arestas;
     ListaAdjacencia lista_adjacencia;
     MatrizAdjacencia matriz_adjacencia;
 };
+
+static double distancia_metros(const Vertice *a, const Vertice *b);
 
 static int reservar_vertices(Grafo *grafo)
 {
@@ -120,12 +122,14 @@ int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
     return grafo_adicionar_vertice(grafo, vertice);
 }
 
-int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
+int grafo_adicionar_aresta_ponderada(Grafo *grafo, size_t origem, size_t destino,
+                                    double peso_metros)
 {
     NoAdjacencia *origem_no;
     NoAdjacencia *destino_no;
 
-    if (grafo == NULL || origem == destino || origem >= grafo->quantidade_vertices ||
+    if (grafo == NULL || !isfinite(peso_metros) || peso_metros < 0.0 ||
+        origem == destino || origem >= grafo->quantidade_vertices ||
         destino >= grafo->quantidade_vertices || grafo_sao_adjacentes(grafo, origem, destino))
         return 0;
     if (grafo->quantidade_arestas == grafo->capacidade_arestas && !reservar_arestas(grafo))
@@ -147,6 +151,7 @@ int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
     grafo->matriz_adjacencia.dados[destino * grafo->matriz_adjacencia.ordem + origem] = 1U;
     grafo->arestas[grafo->quantidade_arestas].origem = origem;
     grafo->arestas[grafo->quantidade_arestas].destino = destino;
+    grafo->arestas[grafo->quantidade_arestas].peso_metros = peso_metros;
     ++grafo->quantidade_arestas;
     return 1;
 }
@@ -264,6 +269,54 @@ int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino)
         origem * grafo->matriz_adjacencia.ordem + destino] != 0U;
 }
 
+int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino)
+{
+    if (grafo == NULL || origem >= grafo->quantidade_vertices ||
+        destino >= grafo->quantidade_vertices) return 0;
+    return grafo_adicionar_aresta_ponderada(
+        grafo, origem, destino,
+        distancia_metros(&grafo->vertices[origem], &grafo->vertices[destino]));
+}
+
+size_t grafo_extrair_arestas_ponderadas(const Grafo *grafo,
+                                       RepresentacaoGrafo representacao,
+                                       ArestaPonderada **arestas)
+{
+    ArestaPonderada *copia;
+    size_t indice;
+
+    if (arestas == NULL) return 0U;
+    *arestas = NULL;
+    if (grafo == NULL || (representacao != GRAFO_LISTA_ADJACENCIA &&
+                          representacao != GRAFO_MATRIZ_ADJACENCIA)) return 0U;
+    if (grafo->quantidade_arestas == 0U) return 0U;
+    copia = malloc(grafo->quantidade_arestas * sizeof(*copia));
+    if (copia == NULL) return 0U;
+
+    /* A lista e a matriz sao mantidas sincronizadas; percorremos a representacao
+       solicitada para validar/contar pares sem duplicar arestas nao direcionadas. */
+    if (representacao == GRAFO_LISTA_ADJACENCIA) {
+        size_t encontrados = 0U;
+        for (indice = 0U; indice < grafo->quantidade_vertices; ++indice) {
+            const NoAdjacencia *no;
+            for (no = grafo->lista_adjacencia.listas[indice]; no != NULL; no = no->proximo)
+                if (indice < no->vertice) ++encontrados;
+        }
+        if (encontrados != grafo->quantidade_arestas) { free(copia); return 0U; }
+    } else {
+        size_t encontrados = 0U;
+        for (indice = 0U; indice < grafo->quantidade_vertices; ++indice) {
+            size_t destino;
+            for (destino = indice + 1U; destino < grafo->quantidade_vertices; ++destino)
+                if (grafo_sao_adjacentes(grafo, indice, destino)) ++encontrados;
+        }
+        if (encontrados != grafo->quantidade_arestas) { free(copia); return 0U; }
+    }
+    memcpy(copia, grafo->arestas, grafo->quantidade_arestas * sizeof(*copia));
+    *arestas = copia;
+    return grafo->quantidade_arestas;
+}
+
 const NoAdjacencia *grafo_vizinhos(const Grafo *grafo, size_t vertice)
 {
     if (grafo == NULL || vertice >= grafo->quantidade_vertices) return NULL;
@@ -278,16 +331,20 @@ static double orientacao(const Vertice *a, const Vertice *b, const Vertice *c)
            (c->coordenadas.longitude - a->coordenadas.longitude);
 }
 
-int grafo_possui_cruzamentos(const Grafo *grafo)
+size_t grafo_contar_cruzamentos_arestas(const Grafo *grafo,
+                                       const Aresta *arestas, size_t quantidade)
 {
-    size_t i, j;
+    size_t i, j, cruzamentos = 0U;
 
-    if (grafo == NULL) return 0;
-    for (i = 0U; i < grafo->quantidade_arestas; ++i) {
-        for (j = i + 1U; j < grafo->quantidade_arestas; ++j) {
-            Aresta a = grafo->arestas[i];
-            Aresta b = grafo->arestas[j];
+    if (grafo == NULL || (quantidade > 0U && arestas == NULL)) return 0U;
+    for (i = 0U; i < quantidade; ++i) {
+        for (j = i + 1U; j < quantidade; ++j) {
+            Aresta a = arestas[i];
+            Aresta b = arestas[j];
             double o1, o2, o3, o4;
+            if (a.origem >= grafo->quantidade_vertices || a.destino >= grafo->quantidade_vertices ||
+                b.origem >= grafo->quantidade_vertices || b.destino >= grafo->quantidade_vertices)
+                continue;
             if (a.origem == b.origem || a.origem == b.destino ||
                 a.destino == b.origem || a.destino == b.destino) continue;
             o1 = orientacao(&grafo->vertices[a.origem], &grafo->vertices[a.destino], &grafo->vertices[b.origem]);
@@ -295,8 +352,27 @@ int grafo_possui_cruzamentos(const Grafo *grafo)
             o3 = orientacao(&grafo->vertices[b.origem], &grafo->vertices[b.destino], &grafo->vertices[a.origem]);
             o4 = orientacao(&grafo->vertices[b.origem], &grafo->vertices[b.destino], &grafo->vertices[a.destino]);
             if (((o1 > 0.0 && o2 < 0.0) || (o1 < 0.0 && o2 > 0.0)) &&
-                ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0))) return 1;
+                ((o3 > 0.0 && o4 < 0.0) || (o3 < 0.0 && o4 > 0.0))) ++cruzamentos;
         }
     }
-    return 0;
+    return cruzamentos;
+}
+
+int grafo_possui_cruzamentos(const Grafo *grafo)
+{
+    Aresta *arestas;
+    size_t indice;
+    int possui;
+    if (grafo == NULL) return 0;
+    if (grafo->quantidade_arestas == 0U) return 0;
+    arestas = malloc(grafo->quantidade_arestas * sizeof(*arestas));
+    if (arestas == NULL) return 0;
+    for (indice = 0U; indice < grafo->quantidade_arestas; ++indice) {
+        arestas[indice].origem = grafo->arestas[indice].origem;
+        arestas[indice].destino = grafo->arestas[indice].destino;
+    }
+    possui = grafo_contar_cruzamentos_arestas(grafo, arestas,
+                                               grafo->quantidade_arestas) > 0U;
+    free(arestas);
+    return possui;
 }

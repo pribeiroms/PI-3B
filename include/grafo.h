@@ -25,6 +25,12 @@ typedef struct {
 	size_t destino;
 } Aresta;
 
+typedef struct {
+	size_t origem;
+	size_t destino;
+	double peso_metros;
+} ArestaPonderada;
+
 typedef struct NoAdjacencia NoAdjacencia;
 
 struct NoAdjacencia {
@@ -59,6 +65,16 @@ int grafo_adicionar_antena(Grafo *grafo, unsigned int mcc, unsigned int net,
 /* Adiciona uma aresta nao direcionada e sem peso. Retorna 1 em caso de sucesso. */
 int grafo_adicionar_aresta(Grafo *grafo, size_t origem, size_t destino);
 
+/* Adiciona uma aresta nao direcionada com peso em metros. */
+int grafo_adicionar_aresta_ponderada(Grafo *grafo, size_t origem, size_t destino,
+									 double peso_metros);
+
+/* Copia as arestas ponderadas usando uma das representacoes de adjacencia. */
+typedef enum { GRAFO_LISTA_ADJACENCIA, GRAFO_MATRIZ_ADJACENCIA } RepresentacaoGrafo;
+size_t grafo_extrair_arestas_ponderadas(const Grafo *grafo,
+										RepresentacaoGrafo representacao,
+										ArestaPonderada **arestas);
+
 /* Le antenas de um CSV OpenCelliD; max_antenas igual a 0 le todos os registros. */
 size_t grafo_carregar_csv(Grafo *grafo, const char *caminho, size_t max_antenas,
 						  char *erro, size_t tamanho_erro);
@@ -71,6 +87,8 @@ size_t grafo_quantidade_arestas(const Grafo *grafo);
 
 /* Retorna 1 se existir cruzamento entre duas arestas sem vertice em comum. */
 int grafo_possui_cruzamentos(const Grafo *grafo);
+size_t grafo_contar_cruzamentos_arestas(const Grafo *grafo,
+										const Aresta *arestas, size_t quantidade);
 
 int grafo_sao_adjacentes(const Grafo *grafo, size_t origem, size_t destino);
 

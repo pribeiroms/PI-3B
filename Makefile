@@ -13,6 +13,8 @@ OPERACOES_TEST_SRC := tests/test_operacoes_grafo.c src/grafo.c
 CONEXOES_TEST_SRC := tests/test_conexoes_geograficas.c src/grafo.c
 DATASET_TEST_SRC := tests/test_dataset.c src/dataset.c src/grafo.c
 DATASET_TEST_APP := $(BUILD_DIR)/test_dataset.exe
+AGM_TEST_APP := $(BUILD_DIR)/test_agm.exe
+AGM_SRC := src/agm.c src/conjuntos_disjuntos.c src/grafo.c
 
 .PHONY: all run test clean
 
@@ -36,14 +38,18 @@ $(CONEXOES_TEST_APP): $(CONEXOES_TEST_SRC) include/grafo.h | $(BUILD_DIR)
 $(DATASET_TEST_APP): $(DATASET_TEST_SRC) include/grafo.h include/dataset.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(DATASET_TEST_SRC) -o $@ $(LDFLAGS)
 
+$(AGM_TEST_APP): tests/test_agm.c $(AGM_SRC) include/agm.h include/conjuntos_disjuntos.h include/grafo.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) tests/test_agm.c $(AGM_SRC) -o $@ $(LDFLAGS)
+
 run: $(APP)
 	./$(APP)
 
-test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP)
+test: $(TEST_APP) $(OPERACOES_TEST_APP) $(CONEXOES_TEST_APP) $(DATASET_TEST_APP) $(AGM_TEST_APP)
 	./$(TEST_APP)
 	./$(OPERACOES_TEST_APP)
 	./$(CONEXOES_TEST_APP)
 	./$(DATASET_TEST_APP)
+	./$(AGM_TEST_APP)
 
 clean:
 	@cmd /C "if exist \"$(BUILD_DIR)\" rmdir /S /Q \"$(BUILD_DIR)\""
