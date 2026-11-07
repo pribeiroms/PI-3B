@@ -4,24 +4,30 @@
 
 #include "conjuntos_disjuntos.h"
 
-static void ordenar(ArestaPonderada *arestas, ArestaPonderada *auxiliar,
-					size_t inicio, size_t fim)
+static void trocar(ArestaPonderada *a, ArestaPonderada *b)
 {
-	size_t meio, esquerda, direita, destino;
+	ArestaPonderada temporaria = *a;
+	*a = *b;
+	*b = temporaria;
+}
+
+static void ordenar(ArestaPonderada *arestas, size_t inicio, size_t fim)
+{
+	size_t esquerda = inicio, direita = fim;
+	double pivo;
 	if (fim - inicio < 2U) return;
-	meio = inicio + (fim - inicio) / 2U;
-	ordenar(arestas, auxiliar, inicio, meio);
-	ordenar(arestas, auxiliar, meio, fim);
-	esquerda = inicio;
-	direita = meio;
-	for (destino = inicio; destino < fim; ++destino) {
-		if (esquerda < meio && (direita >= fim ||
-			arestas[esquerda].peso_metros <= arestas[direita].peso_metros))
-			auxiliar[destino] = arestas[esquerda++];
-		else
-			auxiliar[destino] = arestas[direita++];
+	pivo = arestas[inicio + (fim - inicio) / 2U].peso_metros;
+	while (esquerda < direita) {
+		while (arestas[esquerda].peso_metros < pivo) ++esquerda;
+		while (arestas[direita - 1U].peso_metros > pivo) --direita;
+		if (esquerda < direita) {
+			trocar(&arestas[esquerda], &arestas[direita - 1U]);
+			++esquerda;
+			--direita;
+		}
 	}
-	for (destino = inicio; destino < fim; ++destino) arestas[destino] = auxiliar[destino];
+	if (inicio < direita) ordenar(arestas, inicio, direita);
+	if (esquerda < fim) ordenar(arestas, esquerda, fim);
 }
 
 int agm_extrair_ordenar_arestas(const Grafo *grafo,
@@ -29,7 +35,6 @@ int agm_extrair_ordenar_arestas(const Grafo *grafo,
 								ArestaPonderada **arestas, size_t *quantidade)
 {
 	size_t total;
-	ArestaPonderada *auxiliar;
 	if (arestas == NULL || quantidade == NULL) return 0;
 	*arestas = NULL;
 	*quantidade = 0U;
@@ -37,12 +42,7 @@ int agm_extrair_ordenar_arestas(const Grafo *grafo,
 	if (grafo == NULL) return 0;
 	if (grafo_quantidade_arestas(grafo) > 0U && total == 0U) return 0;
 	*quantidade = total;
-	if (total > 1U) {
-		auxiliar = malloc(total * sizeof(*auxiliar));
-		if (auxiliar == NULL) { free(*arestas); *arestas = NULL; *quantidade = 0U; return 0; }
-		ordenar(*arestas, auxiliar, 0U, total);
-		free(auxiliar);
-	}
+	if (total > 1U) ordenar(*arestas, 0U, total);
 	return 1;
 }
 
@@ -54,9 +54,7 @@ int agm_kruskal(const Grafo *grafo, RepresentacaoGrafo representacao,
 	ConjuntosDisjuntos *conjuntos;
 	size_t quantidade, vertices, selecionadas_n = 0U, indice;
 	ResultadoAgm calculado = {NULL, 0U, 0U, 0.0, 0U, 0U};
-	if (grafo == NULL || resultado == NULL ||
-		(representacao != GRAFO_LISTA_ADJACENCIA &&
-		 representacao != GRAFO_MATRIZ_ADJACENCIA)) return 0;
+	if (grafo == NULL || resultado == NULL) return 0;
 	*resultado = calculado;
 	vertices = grafo_quantidade_vertices(grafo);
 	if (!agm_extrair_ordenar_arestas(grafo, representacao, &ordenadas, &quantidade)) return 0;
@@ -104,17 +102,14 @@ int agm_kruskal(const Grafo *grafo, RepresentacaoGrafo representacao,
 		calculado.cruzamentos = grafo_contar_cruzamentos_arestas(grafo, pares, selecionadas_n);
 		free(pares);
 	}
+	calculado.cruzamentos_grafo_candidato = grafo_contar_cruzamentos_arestas(
+		grafo, (const Aresta *)NULL, 0U);
 	/* Obtencao dos pares candidatos pela matriz evita expor estado interno do Grafo. */
 	{
 		ArestaPonderada *candidatas = NULL;
 		size_t n = grafo_extrair_arestas_ponderadas(grafo, representacao, &candidatas);
 		Aresta *pares = n == 0U ? NULL : malloc(n * sizeof(*pares));
-		if (n > 0U && pares == NULL) {
-			free(candidatas);
-			free(selecionadas);
-			return 0;
-		}
-		if (n > 0U) {
+		if (n > 0U && pares != NULL) {
 			for (indice = 0U; indice < n; ++indice) {
 				pares[indice].origem = candidatas[indice].origem;
 				pares[indice].destino = candidatas[indice].destino;
