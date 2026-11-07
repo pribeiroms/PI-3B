@@ -3,6 +3,7 @@
 #include <time.h>
 
 #include "analise_planaridade.h"
+#include "agm.h"
 #include "candidato_fibra.h"
 #include "execucao.h"
 #include "exportar_dot.h"
@@ -145,6 +146,66 @@ static int executar_interferencia(Grafo *grafo, const OpcoesExecucao *opcoes,
     return 0;
 }
 
+/* Executa as issues #74 e #76 sobre o grafo candidato da Fase II. */
+static int executar_agm(Grafo *grafo, const OpcoesExecucao *opcoes,
+                        double leitura_ms)
+{
+    RelatorioCandidatoFibra candidato;
+    RelatorioAGM relatorio;
+    Grafo *floresta = NULL;
+    Cruzamento *cruzamentos = NULL;
+    size_t cruzamentos_candidato, cruzamentos_agm;
+    clock_t inicio = clock(), fim;
+
+    if (!candidato_fibra_construir(grafo, opcoes->candidato, &candidato) ||
+        !agm_kruskal(grafo, &floresta, &relatorio)) {
+        fputs("Erro ao calcular a arvore geradora minima. Verifique os "
+              "parametros e a memoria disponivel.\n", stderr);
+        grafo_destruir(floresta);
+        grafo_destruir(grafo);
+        return 1;
+    }
+    cruzamentos_candidato = grafo_detectar_cruzamentos(grafo, NULL);
+    cruzamentos_agm = grafo_detectar_cruzamentos(floresta, &cruzamentos);
+    fim = clock();
+    printf("\nFloresta geradora minima por Kruskal (Fase II)\n"
+        "Vertices: %zu\nArestas selecionadas: %zu\nArvores geradas: %zu\n"
+        "Fibra minima: %.4f km\n"
+        "Cruzamentos no grafo candidato: %zu\n"
+        "Cruzamentos na AGM: %zu\n",
+        relatorio.vertices, relatorio.arestas, relatorio.arvores,
+        relatorio.custo_total_km, cruzamentos_candidato, cruzamentos_agm);
+    if (cruzamentos_agm < cruzamentos_candidato)
+        puts("Impacto: a selecao da AGM reduz os cruzamentos; avaliar isolamento "
+             "nos cruzamentos restantes.");
+    else if (cruzamentos_agm > 0U)
+        puts("Impacto: os cruzamentos permanecem na AGM; avaliar isolamento "
+             "dos cabos nesses pontos.");
+    else
+        puts("Impacto: a AGM nao apresenta cruzamentos detectados, reduzindo a "
+             "necessidade de isolamento por cruzamento.");
+    printf("Tempo de calculo, incluindo cruzamentos: %.3f ms (leitura: %.3f ms)\n",
+        decorrido_ms(inicio, fim), leitura_ms);
+    if (opcoes->dot != NULL) {
+        if (exportar_dot(floresta, cruzamentos, cruzamentos_agm, opcoes->dot))
+            printf("Mapa da AGM exportado em: %s\n", opcoes->dot);
+        else fprintf(stderr, "Erro ao exportar o mapa da AGM em %s.\n", opcoes->dot);
+    }
+    if (opcoes->dot_mapa != NULL) {
+        size_t gravados = exportar_dot_mapas(floresta, cruzamentos,
+            cruzamentos_agm, opcoes->dot_mapa);
+        if (gravados > 0U)
+            printf("Recortes da AGM exportados: %zu arquivo(s).\n", gravados);
+        else fprintf(stderr, "Erro ao exportar os recortes da AGM em %s.\n",
+            opcoes->dot_mapa);
+    }
+    free(cruzamentos);
+    grafo_destruir(floresta);
+    grafo_destruir(grafo);
+    (void)candidato;
+    return 0;
+}
+
 static int executar(int argc, char *argv[])
 {
     OpcoesExecucao opcoes;
@@ -187,6 +248,8 @@ static int executar(int argc, char *argv[])
         return executar_candidato(grafo, &opcoes, resultado.leitura_ms);
     if (opcoes.modo == EXECUCAO_MODO_INTERFERENCIA)
         return executar_interferencia(grafo, &opcoes, resultado.leitura_ms);
+    if (opcoes.modo == EXECUCAO_MODO_AGM)
+        return executar_agm(grafo, &opcoes, resultado.leitura_ms);
     inicio = clock();
     if (!grafo_construir_conexoes_ex(grafo, &resultado.arestas)) {
         fputs("Erro ao construir conexoes do grafo (memoria insuficiente).\n", stderr);
