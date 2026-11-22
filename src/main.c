@@ -155,6 +155,8 @@ static int executar_agm(Grafo *grafo, const OpcoesExecucao *opcoes,
     Grafo *floresta = NULL;
     Cruzamento *cruzamentos = NULL;
     size_t cruzamentos_candidato, cruzamentos_agm;
+    EstimativaMemoriaGrafo memoria;
+    int memoria_disponivel;
     clock_t inicio = clock(), fim;
 
     if (!candidato_fibra_construir(grafo, opcoes->candidato, &candidato) ||
@@ -167,6 +169,7 @@ static int executar_agm(Grafo *grafo, const OpcoesExecucao *opcoes,
     }
     cruzamentos_candidato = grafo_detectar_cruzamentos(grafo, NULL);
     cruzamentos_agm = grafo_detectar_cruzamentos(floresta, &cruzamentos);
+    memoria_disponivel = grafo_estimar_memoria(grafo, &memoria);
     fim = clock();
     printf("\nFloresta geradora minima por Kruskal (Fase II)\n"
         "Vertices: %zu\nArestas selecionadas: %zu\nArvores geradas: %zu\n"
@@ -175,6 +178,13 @@ static int executar_agm(Grafo *grafo, const OpcoesExecucao *opcoes,
         "Cruzamentos na AGM: %zu\n",
         relatorio.vertices, relatorio.arestas, relatorio.arvores,
         relatorio.custo_total_km, cruzamentos_candidato, cruzamentos_agm);
+    if (memoria_disponivel)
+        printf("Memoria estimada (%s): %zu bytes (modelo de alocacoes)\n",
+            opcoes->estrutura == GRAFO_LISTA_ADJACENCIA ? "lista" : "matriz",
+            opcoes->estrutura == GRAFO_LISTA_ADJACENCIA ?
+                memoria.memoria_lista_total_bytes : memoria.memoria_matriz_total_bytes);
+    else
+        puts("Memoria estimada: indisponivel");
     if (cruzamentos_agm < cruzamentos_candidato)
         puts("Impacto: a selecao da AGM reduz os cruzamentos; avaliar isolamento "
              "nos cruzamentos restantes.");
