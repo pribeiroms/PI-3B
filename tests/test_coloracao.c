@@ -255,7 +255,7 @@ static void teste_limites_coloracao_exata(void)
     assert(coloracao_mensagem_exata(COLORACAO_EXATA_LIMITE_TEMPO) != NULL);
 }
 
-/* As colocacoes da gulosa (nas duas ordens) e da exata devem passar na
+/* As coloracoes da gulosa (nas duas ordens) e da exata devem passar na
  * validacao detalhada, nas tres estruturas.
  */
 static void teste_validacao_resultados(EstruturaGrafo estrutura)
