@@ -32,6 +32,12 @@ AGM_TEST_APP := $(BUILD_DIR)/test_agm.exe
 AGM_TEST_SRC := tests/test_agm.c src/agm.c src/grafo.c src/utf8io.c
 MEDICAO_TEST_APP := $(BUILD_DIR)/test_medicao.exe
 MEDICAO_TEST_SRC := tests/test_medicao.c src/medicao.c src/grafo.c src/utf8io.c
+BENCH_COLORACAO_APP := $(BUILD_DIR)/benchmark_coloracao.exe
+BENCH_COLORACAO_SRC := src/benchmark_coloracao.c src/coloracao.c src/interferencia.c src/medicao.c src/dataset.c src/grafo.c src/utf8io.c
+# Parametros do benchmark da coloracao (#84). REPETICOES vale para os dois
+# alvos; LIMITE_SEGUNDOS e o teto de tempo da coloracao exata por execucao.
+REPETICOES ?= 5
+LIMITE_SEGUNDOS ?= 60
 DPI ?= 150
 
 # Execucoes dos modos da Fase II. LIMITE e ESTRUTURA valem para os quatro
@@ -107,7 +113,7 @@ MODELO_FASE2_N := data/subconjuntos/fase2/opencellid_denso_n
 # Onde a contagem de vertices e arestas da issue #70 fica gravada.
 TABELA_SUBCONJUNTOS ?= docs/CONTAGEM_SUBCONJUNTOS.md
 
-.PHONY: all run dot png candidato interferencia dot-candidato dot-interferencia subconjuntos-fase2 subconjuntos-check tabela-subconjuntos tabela-subconjuntos-tela fase2-tudo fase1-nova ajuda test test-fluxo test-integracao test-subconjuntos benchmark-lista clean
+.PHONY: all run dot png candidato interferencia dot-candidato dot-interferencia subconjuntos-fase2 subconjuntos-check tabela-subconjuntos tabela-subconjuntos-tela fase2-tudo fase1-nova ajuda test test-fluxo test-integracao test-subconjuntos benchmark-lista benchmark-coloracao clean
 
 all: $(APP)
 
@@ -144,6 +150,7 @@ ajuda:
 	@echo BENCHMARK
 	@echo "  mingw32-make benchmark-lista                     dados antigos"
 	@echo "  mingw32-make benchmark-lista SUBCONJUNTOS=fase2  dados novos"
+	@echo "  mingw32-make benchmark-coloracao                gulosa x exata"
 	@echo ---------------------------------------------------------------
 	@echo "Para um arquivo fora da lista: DATASET=caminho/do/arquivo.csv"
 	@echo "Variaveis: LIMITE, ESTRUTURA, EXTRA, SUBCONJUNTOS, DATASET"
@@ -190,6 +197,9 @@ $(PROPRIEDADES_TEST_APP): $(PROPRIEDADES_TEST_SRC) include/grafo.h include/color
 
 $(AGM_TEST_APP): $(AGM_TEST_SRC) include/grafo.h include/agm.h include/utf8io.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(AGM_TEST_SRC) -o $@ $(LDFLAGS)
+
+$(BENCH_COLORACAO_APP): $(BENCH_COLORACAO_SRC) include/coloracao.h include/interferencia.h include/medicao.h include/dataset.h include/grafo.h include/utf8io.h | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(BENCH_COLORACAO_SRC) -o $@ $(LDFLAGS)
 
 $(MEDICAO_TEST_APP): $(MEDICAO_TEST_SRC) include/medicao.h include/grafo.h include/utf8io.h | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(MEDICAO_TEST_SRC) -o $@ $(LDFLAGS)
@@ -263,6 +273,11 @@ test-subconjuntos: $(APP)
 
 benchmark-lista: $(APP)
 	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/benchmark_lista.ps1 -Subconjuntos $(SUBCONJUNTOS)
+
+# Coloracao gulosa (ordem natural e Welsh-Powell) x exata nos subconjuntos da
+# Fase II, em lista e matriz (issue #84). Grava em results/fase2/coloracao/.
+benchmark-coloracao: $(BENCH_COLORACAO_APP)
+	powershell -NoProfile -ExecutionPolicy Bypass -File scripts/benchmark_coloracao.ps1 -Repeticoes $(REPETICOES) -LimiteSegundos $(LIMITE_SEGUNDOS)
 
 # --- Subconjuntos da Fase II (issue #70) ------------------------------------
 # Os subconjuntos da Fase I continuam sendo gerados por
